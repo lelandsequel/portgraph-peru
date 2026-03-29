@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ConfidenceBadge } from '@/components/ProvenancePanel';
 import { ConfidenceTier, PERU_PORTS } from '@/lib/db/types';
+import EntityPanel from '@/components/EntityPanel';
 
 // Country coordinates for route map
 const COUNTRY_COORDS: Record<string, { lat: number; lng: number }> = {
@@ -42,6 +43,7 @@ export default function RouteMapPage() {
   const [routes, setRoutes] = useState<RouteData[]>([]);
   const [loading, setLoading] = useState(true);
   const [commodityFilter, setCommodityFilter] = useState<string>('all');
+  const [entityFlow, setEntityFlow] = useState<{ exporter: string; importer: string; commodity: string; value: number } | null>(null);
 
   useEffect(() => {
     async function loadRoutes() {
@@ -259,7 +261,12 @@ export default function RouteMapPage() {
                   </tr>
                 ) : (
                   filteredRoutes.map((route, i) => (
-                    <tr key={i} className="border-b border-gray-800/50 hover:bg-gray-800/50">
+                    <tr key={i} className="border-b border-gray-800/50 hover:bg-gray-800/50 cursor-pointer" onClick={() => setEntityFlow({
+                      exporter: 'Peru',
+                      importer: route.destination,
+                      commodity: route.commodities[0] || 'copper',
+                      value: route.total_weight_kg,
+                    })}>
                       <td className="px-4 py-3 text-blue-400 font-mono">
                         {route.port === 'PECLL' ? 'Callao' : 'Matarani'}
                       </td>
@@ -285,6 +292,16 @@ export default function RouteMapPage() {
             </table>
           </div>
         </>
+      )}
+
+      {entityFlow && (
+        <EntityPanel
+          exporter={entityFlow.exporter}
+          importer={entityFlow.importer}
+          commodity={entityFlow.commodity}
+          value={entityFlow.value}
+          onClose={() => setEntityFlow(null)}
+        />
       )}
     </div>
   );

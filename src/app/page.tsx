@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { TradeIntelligenceProfile, QueryType } from '@/lib/db/types';
 import IntelligenceProfile from '@/components/IntelligenceProfile';
+import EntityPanel from '@/components/EntityPanel';
 
 const QUERY_TYPES: { value: QueryType; label: string; placeholder: string }[] = [
   { value: 'vessel', label: 'Vessel', placeholder: 'Enter vessel name or IMO number...' },
@@ -26,6 +27,7 @@ export default function HomePage() {
   const [profile, setProfile] = useState<TradeIntelligenceProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [entityPanel, setEntityPanel] = useState<{ exporter: string; importer: string; commodity: string; value: number } | null>(null);
 
   const executeQuery = useCallback(async (q: string, t: QueryType) => {
     if (!q.trim()) return;
@@ -161,7 +163,34 @@ export default function HomePage() {
       )}
 
       {/* Results */}
-      {profile && !loading && <IntelligenceProfile profile={profile} />}
+      {profile && !loading && (
+        <div>
+          <div className="flex justify-end mb-3">
+            <button
+              onClick={() => setEntityPanel({
+                exporter: 'Peru',
+                importer: query,
+                commodity: queryType === 'commodity' ? query : 'copper',
+                value: 1000000,
+              })}
+              className="px-3 py-1.5 text-xs bg-cyan-900/50 text-cyan-400 border border-cyan-800 hover:bg-cyan-800/50 rounded-md transition-colors"
+            >
+              Resolve Entities &rarr;
+            </button>
+          </div>
+          <IntelligenceProfile profile={profile} />
+        </div>
+      )}
+
+      {entityPanel && (
+        <EntityPanel
+          exporter={entityPanel.exporter}
+          importer={entityPanel.importer}
+          commodity={entityPanel.commodity}
+          value={entityPanel.value}
+          onClose={() => setEntityPanel(null)}
+        />
+      )}
 
       {/* Footer info */}
       <div className="mt-12 border-t border-gray-800 pt-6">

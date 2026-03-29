@@ -1,15 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { ConfidenceDots, ConfidenceBadge } from '@/components/ProvenancePanel';
 import { TradeFlow } from '@/lib/db/types';
+import EntityPanel from '@/components/EntityPanel';
 
 export default function TradeFeedPage() {
   const [flows, setFlows] = useState<TradeFlow[]>([]);
   const [loading, setLoading] = useState(true);
   const [portFilter, setPortFilter] = useState<string>('all');
   const [confidenceFilter, setConfidenceFilter] = useState<string>('all');
+  const [entityFlow, setEntityFlow] = useState<{ exporter: string; importer: string; commodity: string; value: number } | null>(null);
 
   useEffect(() => {
     async function loadFeed() {
@@ -80,10 +81,15 @@ export default function TradeFeedPage() {
       ) : (
         <div className="space-y-2">
           {filteredFlows.map((flow, i) => (
-            <Link
+            <div
               key={flow.id || i}
-              href={`/?q=${encodeURIComponent(flow.vessel_name || '')}&type=vessel`}
-              className="block bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-lg p-4 transition-colors"
+              onClick={() => setEntityFlow({
+                exporter: flow.origin_country || 'Peru',
+                importer: flow.destination_country || '',
+                commodity: flow.commodity || 'copper',
+                value: flow.weight_kg || 0,
+              })}
+              className="block bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-lg p-4 transition-colors cursor-pointer"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
@@ -138,7 +144,7 @@ export default function TradeFeedPage() {
                   )}
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}
@@ -146,6 +152,16 @@ export default function TradeFeedPage() {
       <div className="mt-6 text-center text-xs text-gray-600">
         Showing {filteredFlows.length} of {flows.length} trade flows
       </div>
+
+      {entityFlow && (
+        <EntityPanel
+          exporter={entityFlow.exporter}
+          importer={entityFlow.importer}
+          commodity={entityFlow.commodity}
+          value={entityFlow.value}
+          onClose={() => setEntityFlow(null)}
+        />
+      )}
     </div>
   );
 }

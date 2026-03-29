@@ -45,10 +45,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   >
                     Route Map
                   </Link>
+                  <Link
+                    href="/entities"
+                    className="px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                  >
+                    Entities
+                  </Link>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-xs text-gray-600 font-mono">Phase 1</span>
+                <span className="text-xs text-gray-600 font-mono">Phase 2</span>
                 <span className="text-xs px-2 py-0.5 rounded bg-emerald-900/50 text-emerald-400 border border-emerald-800">
                   LIVE
                 </span>
