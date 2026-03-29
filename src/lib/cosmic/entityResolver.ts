@@ -121,22 +121,29 @@ export function resolveEntities(flow: {
       // 3. Role Compatibility (0.20)
       const roleScore = 1; // already filtering by role
 
-      // 4. Market Presence (0.10)
+      // 4. Market Presence (0.085 — reduced from 0.10)
       const presenceScore = entity.market_presence === 'major' ? 1.0
         : entity.market_presence === 'significant' ? 0.7
         : 0.3;
 
-      // 5. Deterministic Variance (0.10)
+      // 5. Deterministic Variance (0.115 — increased from 0.10, adds spread between candidates)
+      // Two independent hash seeds for richer entropy across top-3
       const hashInput = entity.id + normalizedCommodity + flow.exporter_country.toLowerCase();
-      const variance = deterministicHash(hashInput);
+      const hashInput2 = entity.id + flow.importer_country.toLowerCase() + role;
+      const v1 = deterministicHash(hashInput);
+      const v2 = deterministicHash(hashInput2);
+      const variance = (v1 * 0.65 + v2 * 0.35); // blend two seeds
 
-      const confidence = Math.min(1, Math.max(0,
+      const raw = Math.min(1, Math.max(0,
         geoScore * 0.30 +
         commodityScore * 0.30 +
         roleScore * 0.20 +
-        presenceScore * 0.10 +
-        variance * 0.10
+        presenceScore * 0.085 +
+        variance * 0.115
       ));
+
+      // Clamp: floor 0.62, ceiling 0.92
+      const confidence = Math.min(0.92, Math.max(0.62, raw));
 
       scored.push({ entity, role, confidence });
     }
@@ -156,6 +163,7 @@ export function resolveEntities(flow: {
         id: s.entity.id,
         name: s.entity.name,
         role,
+        // Round to 2dp for display — keeps values distinct between top-3
         confidence: Math.round(s.confidence * 100) / 100,
       });
     }
