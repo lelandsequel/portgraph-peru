@@ -142,8 +142,8 @@ export function resolveEntities(flow: {
         variance * 0.115
       ));
 
-      // Clamp: floor 0.62, ceiling 0.92
-      const confidence = Math.min(0.92, Math.max(0.62, raw));
+      // Scale raw [0..1] into [0.62..0.92] — keeps full spread, avoids ceiling clustering
+      const confidence = 0.62 + raw * 0.30;
 
       scored.push({ entity, role, confidence });
     }
