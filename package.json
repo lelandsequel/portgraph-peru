@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "ingest:oec": "npx tsx scripts/ingest-oec.ts",
+    "ingest:daily": "npx tsx scripts/ingest-oec.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.100.1",
