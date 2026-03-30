@@ -10,7 +10,9 @@
     "ingest:oec": "npx tsx scripts/ingest-oec.ts",
     "ingest:daily": "npx tsx scripts/ingest-oec.ts",
     "ingest:comtrade": "npx tsx scripts/ingest-comtrade.ts",
-    "ingest:all": "npm run ingest:oec && npm run ingest:comtrade"
+    "ingest:all": "npm run ingest:oec && npm run ingest:comtrade",
+    "enrich:companies": "npx tsx scripts/enrich-companies.ts",
+    "enrich:antamina": "npx tsx scripts/antamina-insert.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.100.1",
