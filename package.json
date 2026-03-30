@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "ingest:oec": "npx tsx scripts/ingest-oec.ts",
-    "ingest:daily": "npm run ingest:portwatch && npm run ingest:vessels",
+    "ingest:daily": "npm run ingest:portwatch && npm run ingest:vessels && npm run enrich:equasis && npm run enrich:destination",
     "ingest:comtrade": "npx tsx scripts/ingest-comtrade.ts",
     "ingest:all": "npm run ingest:oec && npm run ingest:comtrade",
     "enrich:companies": "npx tsx scripts/enrich-companies.ts",
@@ -18,7 +18,11 @@
     "enrich:scco": "npx tsx scripts/enrich-scco-quellaveco-bvn.ts",
     "ingest:portwatch": "npx tsx scripts/ingest-portwatch.ts",
     "ingest:full": "npm run ingest:oec && npm run ingest:comtrade && npm run ingest:portwatch",
-    "ingest:vessels": "npx tsx scripts/ingest-vessels.ts"
+    "ingest:vessels": "npx tsx scripts/ingest-vessels.ts",
+    "ingest:comtrade-monthly": "npx tsx scripts/ingest-comtrade-monthly.ts",
+    "ingest:monthly": "npm run ingest:comtrade-monthly",
+    "enrich:equasis": "npx tsx scripts/enrich-vessels-equasis.ts",
+    "enrich:destination": "npx tsx scripts/enrich-vessels-destination.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.100.1",

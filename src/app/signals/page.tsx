@@ -8,12 +8,14 @@ const TYPE_LABEL: Record<string, string> = {
   entity_entry: 'Entity Entry',
   dominance_shift: 'Dominance Shift',
   route_expansion: 'Route Expansion',
+  route_confirmed: 'Route Confirmed',
 }
 
 const TYPE_COLOR: Record<string, string> = {
   entity_entry: 'text-[#00263f] bg-[#cee5ff]/60',
   dominance_shift: 'text-[#5c006a] bg-[#f3d0ff]/60',
   route_expansion: 'text-[#006a62] bg-[#70f8e8]/30',
+  route_confirmed: 'text-[#8b4513] bg-[#ffecd2]/80',
 }
 
 function timeAgo(ts: number): string {
@@ -107,10 +109,10 @@ export default function SignalsPage() {
   }, [])
 
   return (
-    <div className="p-10 max-w-4xl">
-      <div className="mb-10">
-        <div className="flex items-center justify-between mb-1">
-          <h1 className="text-3xl font-thin tracking-wide text-[#00263f]" style={{ fontFamily: 'Sora, Manrope' }}>Key Signals</h1>
+    <div className="p-4 sm:p-10 max-w-4xl">
+      <div className="mb-6 sm:mb-10">
+        <div className="flex items-center justify-between mb-1 gap-2">
+          <h1 className="text-xl sm:text-3xl font-thin tracking-wide text-[#00263f]" style={{ fontFamily: 'Sora, Manrope' }}>Key Signals</h1>
           {lastRefresh && (
             <span className="text-xs text-[#72777e]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>Updated {lastRefresh}</span>
           )}

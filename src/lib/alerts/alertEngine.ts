@@ -12,6 +12,9 @@ export type PreviousState = Map<string, FlowState>
 // Major traders for HIGH severity upgrade
 const MAJOR_TRADERS = ['glencore', 'trafigura', 'mercuria', 'freeport', 'southern copper', 'zijin', 'antofagasta']
 
+// Key destination countries for route_confirmed alerts
+const ROUTE_CONFIRMED_COUNTRIES = ['china', 'japan', 'south korea', 'india', 'germany', 'taiwan']
+
 function isMajor(name: string): boolean {
   const lower = name.toLowerCase()
   return MAJOR_TRADERS.some(t => lower.includes(t))
@@ -92,6 +95,36 @@ function seedAlerts(flows: Record<string, unknown>[]): TradeAlert[] {
       },
     },
   ]
+
+  // Generate route_confirmed alerts from vessel_call flows with destination data
+  for (const f of topFlows) {
+    const md = f.match_details as Record<string, unknown> | undefined
+    if (!md) continue
+    const matchMethod = f.match_method as string
+    const vesselName = md.vessel_name as string
+    const destination = md.destination as string
+    const destCountry = (md.destination_country as string) || (f.destination_country as string)
+    const peruPort = f.peru_port as string
+
+    if (matchMethod === 'route_confirmed' || (vesselName && destCountry)) {
+      const country = destCountry || ''
+      if (!country) continue
+      const isKeyDest = ROUTE_CONFIRMED_COUNTRIES.some(c => country.toLowerCase().includes(c))
+      if (!isKeyDest) continue
+
+      alerts.push({
+        id: `seed-rc-${alerts.length}`,
+        type: 'route_confirmed',
+        title: `${vesselName || 'Bulk carrier'} heading to ${destination || country}`,
+        description: `Loaded at ${peruPort || 'Peru port'}, confirmed destination: ${destination || country} (${country})`,
+        severity: 'high',
+        confidence: clampConfidence(0.88),
+        timestamp: now - alerts.length * 3 * 60000,
+        flowId: (f.id as string) || `flow-rc-${alerts.length}`,
+        entities: [vesselName, country, peruPort].filter(Boolean),
+      })
+    }
+  }
 
   // Generate 4-5 seed alerts from top flows
   const targets = [
@@ -199,6 +232,28 @@ export function generateAlerts(
           timestamp: now,
           flowId: id,
           entities: [currentImporter],
+        })
+      }
+    }
+
+    // ROUTE CONFIRMED — vessel with Peru port + destination = key country
+    const md = flow.match_details as Record<string, unknown> | undefined
+    const vesselName = md?.vessel_name as string
+    const destCountry = (md?.destination_country as string) || (flow.destination_country as string)
+    if (vesselName && destCountry) {
+      const isKeyDest = ROUTE_CONFIRMED_COUNTRIES.some(c => destCountry.toLowerCase().includes(c))
+      if (isKeyDest) {
+        const dest = (md?.destination as string) || destCountry
+        alerts.push({
+          id: `rc-${id}-${now}`,
+          type: 'route_confirmed',
+          title: `${vesselName} heading to ${dest}`,
+          description: `Loaded at ${(flow.peru_port as string) || 'Peru port'}, confirmed destination: ${dest} (${destCountry})`,
+          severity: 'high',
+          confidence: clampConfidence(0.88),
+          timestamp: now,
+          flowId: id,
+          entities: [vesselName, destCountry, flow.peru_port as string].filter(Boolean),
         })
       }
     }

@@ -1,4 +1,4 @@
-export type AlertType = 'entity_entry' | 'dominance_shift' | 'route_expansion'
+export type AlertType = 'entity_entry' | 'dominance_shift' | 'route_expansion' | 'route_confirmed'
 export type AlertSeverity = 'medium' | 'high'
 
 export interface TradeAlert {

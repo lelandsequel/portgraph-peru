@@ -90,7 +90,7 @@ export default function GuidedTour() {
     <button
       onClick={startTour}
       aria-label="Start guided tour"
-      className="fixed bottom-6 right-6 z-50 w-9 h-9 rounded-full bg-[#e5e9eb] hover:bg-[#c2c7ce] text-[#42474e] text-sm font-semibold shadow-sm transition-colors duration-200 flex items-center justify-center"
+      className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-11 h-11 sm:w-9 sm:h-9 rounded-full bg-[#e5e9eb] hover:bg-[#c2c7ce] text-[#42474e] text-sm font-semibold shadow-sm transition-colors duration-200 flex items-center justify-center"
       style={{ fontFamily: 'Manrope' }}
     >
       ?

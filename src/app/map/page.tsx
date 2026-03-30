@@ -88,9 +88,9 @@ export default function RouteMapPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Route Map</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">Route Map</h1>
           <p className="text-gray-400 text-sm">Peru ports to destination countries — sized by volume</p>
         </div>
         <div className="flex items-center gap-3">
@@ -213,7 +213,7 @@ export default function RouteMapPage() {
             </svg>
 
             {/* Legend */}
-            <div className="flex items-center gap-6 mt-3 text-xs text-gray-500">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-6 mt-3 text-xs text-gray-500">
               <div className="flex items-center gap-1">
                 <span className="w-3 h-1 bg-blue-500 rounded" />
                 <span>Copper</span>
@@ -238,8 +238,8 @@ export default function RouteMapPage() {
           </div>
 
           {/* Route Table */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
               <thead>
                 <tr className="border-b border-gray-800">
                   <th className="text-left px-4 py-3 text-gray-400 font-medium">Port</th>
