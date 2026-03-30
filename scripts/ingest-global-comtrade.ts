@@ -2,8 +2,8 @@
  * NAUTILUS — Global UN Comtrade Ingestion
  *
  * Source: UN Comtrade Public Preview API (no API key required)
- * Reporters: Chile, Australia, Brazil, Indonesia, South Africa, DRC
- * Commodities: Copper, Iron Ore, Coal, Soy, Nickel, Cobalt, Zinc
+ * Reporters: Chile, Australia, Brazil, Indonesia, South Africa, DRC, Canada, Russia, Ukraine, Kazakhstan, Guinea
+ * Commodities: Copper, Iron Ore, Coal, Soy, Nickel, Cobalt, Zinc, Potash, Wheat, Fertilizer, Uranium, Bauxite
  *
  * Endpoint: https://comtradeapi.un.org/public/v1/preview/C/A/HS
  *
@@ -25,6 +25,11 @@ const REPORTERS = [
   { code: 360, name: 'Indonesia', region: 'Asia-Pacific', port: 'Samarinda', unlocode: 'IDSMR' },
   { code: 710, name: 'South Africa', region: 'Africa', port: 'Richards Bay', unlocode: 'ZARCB' },
   { code: 180, name: 'DRC', region: 'Africa', port: 'Matadi', unlocode: 'CDMAT' },
+  { code: 124, name: 'Canada', region: 'North America', port: 'Vancouver', unlocode: 'CAVAN' },
+  { code: 643, name: 'Russia', region: 'Europe/FSU', port: 'Novorossiysk', unlocode: 'RUNVS' },
+  { code: 804, name: 'Ukraine', region: 'Europe/FSU', port: 'Odessa', unlocode: 'UAODS' },
+  { code: 398, name: 'Kazakhstan', region: 'Europe/FSU', port: 'Aktau', unlocode: 'KZAKU' },
+  { code: 324, name: 'Guinea', region: 'West Africa', port: 'Conakry', unlocode: 'GNCKY' },
 ]
 
 // HS codes by country specialization
@@ -52,6 +57,28 @@ const COUNTRY_HS: Record<string, { code: string; commodity: string; category: st
   DRC: [
     { code: '2605', commodity: 'Cobalt Ore', category: 'cobalt' },
     { code: '2603', commodity: 'Copper Ore', category: 'copper_ore' },
+  ],
+  Canada: [
+    { code: '310420', commodity: 'Potash (KCl)', category: 'potash' },
+    { code: '100190', commodity: 'Wheat', category: 'wheat' },
+    { code: '100590', commodity: 'Corn/Maize', category: 'corn' },
+  ],
+  Russia: [
+    { code: '100190', commodity: 'Wheat', category: 'wheat' },
+    { code: '310210', commodity: 'Ammonium Nitrate (Fertilizer)', category: 'fertilizer' },
+    { code: '310420', commodity: 'Potash (KCl)', category: 'potash' },
+  ],
+  Ukraine: [
+    { code: '100190', commodity: 'Wheat', category: 'wheat' },
+    { code: '100590', commodity: 'Corn/Maize', category: 'corn' },
+    { code: '120100', commodity: 'Soybeans', category: 'soy' },
+  ],
+  Kazakhstan: [
+    { code: '261210', commodity: 'Uranium Ore', category: 'uranium' },
+    { code: '100190', commodity: 'Wheat', category: 'wheat' },
+  ],
+  Guinea: [
+    { code: '260600', commodity: 'Bauxite (Aluminium Ore)', category: 'bauxite' },
   ],
 }
 
@@ -81,6 +108,28 @@ const PORT_ASSIGN: Record<string, Record<string, { port: string; unlocode: strin
     cobalt: { port: 'Matadi', unlocode: 'CDMAT' },
     copper_ore: { port: 'Matadi', unlocode: 'CDMAT' },
   },
+  Canada: {
+    potash: { port: 'Vancouver', unlocode: 'CAVAN' },
+    wheat: { port: 'Vancouver', unlocode: 'CAVAN' },
+    corn: { port: 'Prince Rupert', unlocode: 'CAPRR' },
+  },
+  Russia: {
+    wheat: { port: 'Novorossiysk', unlocode: 'RUNVS' },
+    fertilizer: { port: 'Novorossiysk', unlocode: 'RUNVS' },
+    potash: { port: 'Novorossiysk', unlocode: 'RUNVS' },
+  },
+  Ukraine: {
+    wheat: { port: 'Odessa', unlocode: 'UAODS' },
+    corn: { port: 'Chornomorsk', unlocode: 'UACHS' },
+    soy: { port: 'Pivdennyi', unlocode: 'UAPIV' },
+  },
+  Kazakhstan: {
+    uranium: { port: 'Aktau', unlocode: 'KZAKU' },
+    wheat: { port: 'Aktau', unlocode: 'KZAKU' },
+  },
+  Guinea: {
+    bauxite: { port: 'Conakry', unlocode: 'GNCKY' },
+  },
 }
 
 interface ComtradeRecord {
@@ -108,7 +157,7 @@ async function fetchComtrade(reporterCode: number, hsCode: string, period: numbe
 async function ingest() {
   console.log('NAUTILUS — Global UN Comtrade Ingest\n')
   console.log('Source: UN Comtrade Public API (export declarations)')
-  console.log('Coverage: 2021–2023 | 6 countries | 8 commodity corridors\n')
+  console.log('Coverage: 2021–2023 | 11 countries | 12 commodity corridors\n')
 
   let total = 0
   const years = [2021, 2022, 2023]

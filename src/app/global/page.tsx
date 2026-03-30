@@ -14,13 +14,22 @@ const COMMODITY_STYLE: Record<string, { color: string; bg: string; icon: string 
   zinc_ore:       { color: '#a855f7', bg: 'rgba(168,85,247,0.1)',  icon: 'hexagon' },
   lead_ore:       { color: '#64748b', bg: 'rgba(100,116,139,0.1)', icon: 'weight' },
   platinum:       { color: '#e2e8f0', bg: 'rgba(226,232,240,0.1)', icon: 'star' },
+  potash:         { color: '#f97316', bg: 'rgba(249,115,22,0.1)',  icon: 'grain' },
+  wheat:          { color: '#eab308', bg: 'rgba(234,179,8,0.1)',   icon: 'agriculture' },
+  corn:           { color: '#84cc16', bg: 'rgba(132,204,22,0.1)',  icon: 'eco' },
+  fertilizer:     { color: '#14b8a6', bg: 'rgba(20,184,166,0.1)', icon: 'spa' },
+  uranium:        { color: '#facc15', bg: 'rgba(250,204,21,0.1)', icon: 'radio_button_checked' },
+  bauxite:        { color: '#dc2626', bg: 'rgba(220,38,38,0.1)',  icon: 'terrain' },
 };
 
 const REGION_FILTERS = [
   { label: 'All Regions', value: 'all' },
   { label: 'Americas', value: 'South America' },
+  { label: 'North America', value: 'North America' },
+  { label: 'Europe/FSU', value: 'Europe/FSU' },
   { label: 'Asia-Pacific', value: 'Asia-Pacific' },
   { label: 'Africa', value: 'Africa' },
+  { label: 'West Africa', value: 'West Africa' },
   { label: 'Oceania', value: 'Oceania' },
 ];
 

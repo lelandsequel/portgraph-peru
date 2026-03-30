@@ -11,6 +11,11 @@
  * - Indonesia: Samarinda (coal), Balikpapan (coal), Morowali (nickel)
  * - South Africa: Richards Bay (coal/platinum), Durban (coal)
  * - DRC: Matadi (cobalt/copper), Boma (cobalt)
+ * - Canada: Vancouver (potash/grain), Prince Rupert (grain), Thunder Bay (grain)
+ * - Russia: Novorossiysk (grain/fertilizer), Taman (grain), Vladivostok (grain)
+ * - Ukraine: Odessa (grain), Chornomorsk (grain), Pivdennyi (grain)
+ * - Kazakhstan: Aktau (uranium/grain)
+ * - Guinea: Conakry (bauxite), Kamsar (bauxite)
  *
  * Run: npx tsx scripts/ingest-global-portwatch.ts
  */
@@ -46,6 +51,23 @@ const GLOBAL_PORTS = [
   { name: 'Durban', country: 'South Africa', unlocode: 'ZADUR', region: 'Africa', commodities: ['Coal'], portid: '' },
   // DRC — Cobalt + Copper
   { name: 'Matadi', country: 'DRC', unlocode: 'CDMAT', region: 'Africa', commodities: ['Cobalt', 'Copper'], portid: '' },
+  // Canada — Potash + Grain
+  { name: 'Vancouver', country: 'Canada', unlocode: 'CAVAN', region: 'North America', commodities: ['Potash', 'Wheat'], portid: '' },
+  { name: 'Prince Rupert', country: 'Canada', unlocode: 'CAPRR', region: 'North America', commodities: ['Wheat', 'Corn'], portid: '' },
+  { name: 'Thunder Bay', country: 'Canada', unlocode: 'CATBA', region: 'North America', commodities: ['Wheat'], portid: '' },
+  // Russia — Grain + Fertilizer
+  { name: 'Novorossiysk', country: 'Russia', unlocode: 'RUNVS', region: 'Europe/FSU', commodities: ['Wheat', 'Fertilizer'], portid: '' },
+  { name: 'Taman', country: 'Russia', unlocode: 'RUTMN', region: 'Europe/FSU', commodities: ['Wheat'], portid: '' },
+  { name: 'Vladivostok', country: 'Russia', unlocode: 'RUVVO', region: 'Europe/FSU', commodities: ['Wheat'], portid: '' },
+  // Ukraine — Grain
+  { name: 'Odessa', country: 'Ukraine', unlocode: 'UAODS', region: 'Europe/FSU', commodities: ['Wheat', 'Corn'], portid: '' },
+  { name: 'Chornomorsk', country: 'Ukraine', unlocode: 'UACHS', region: 'Europe/FSU', commodities: ['Wheat', 'Corn'], portid: '' },
+  { name: 'Pivdennyi', country: 'Ukraine', unlocode: 'UAPIV', region: 'Europe/FSU', commodities: ['Wheat', 'Soy'], portid: '' },
+  // Kazakhstan — Uranium + Grain
+  { name: 'Aktau', country: 'Kazakhstan', unlocode: 'KZAKU', region: 'Europe/FSU', commodities: ['Uranium Ore', 'Wheat'], portid: '' },
+  // Guinea — Bauxite
+  { name: 'Conakry', country: 'Guinea', unlocode: 'GNCKY', region: 'West Africa', commodities: ['Bauxite'], portid: '' },
+  { name: 'Kamsar', country: 'Guinea', unlocode: 'GNKMR', region: 'West Africa', commodities: ['Bauxite'], portid: '' },
 ]
 
 interface PortWatchRecord {

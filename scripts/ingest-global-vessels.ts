@@ -11,6 +11,11 @@
  * - Indonesia: Samarinda, Balikpapan
  * - South Africa: Richards Bay, Durban
  * - DRC: Matadi
+ * - Canada: Vancouver, Prince Rupert
+ * - Russia: Novorossiysk
+ * - Ukraine: Odessa
+ * - Kazakhstan: Aktau
+ * - Guinea: Conakry, Kamsar
  *
  * Run: npx tsx scripts/ingest-global-vessels.ts
  */
@@ -55,6 +60,25 @@ const GLOBAL_PORTS = [
   // DRC — Cobalt
   { name: 'Matadi', country: 'DRC', unlocode: 'CDMAT', vf_code: 'CDMAT000',
     region: 'Africa', commodity: 'Cobalt / Copper' },
+  // Canada — Potash + Grain
+  { name: 'Vancouver', country: 'Canada', unlocode: 'CAVAN', vf_code: 'CAVAN000',
+    region: 'North America', commodity: 'Potash / Wheat' },
+  { name: 'Prince Rupert', country: 'Canada', unlocode: 'CAPRR', vf_code: 'CAPRR000',
+    region: 'North America', commodity: 'Wheat / Corn' },
+  // Russia — Grain + Fertilizer
+  { name: 'Novorossiysk', country: 'Russia', unlocode: 'RUNVS', vf_code: 'RUNVS000',
+    region: 'Europe/FSU', commodity: 'Wheat / Fertilizer' },
+  // Ukraine — Grain
+  { name: 'Odessa', country: 'Ukraine', unlocode: 'UAODS', vf_code: 'UAODS000',
+    region: 'Europe/FSU', commodity: 'Wheat / Corn' },
+  // Kazakhstan — Uranium + Grain
+  { name: 'Aktau', country: 'Kazakhstan', unlocode: 'KZAKU', vf_code: 'KZAKU000',
+    region: 'Europe/FSU', commodity: 'Uranium Ore / Wheat' },
+  // Guinea — Bauxite
+  { name: 'Conakry', country: 'Guinea', unlocode: 'GNCKY', vf_code: 'GNCKY000',
+    region: 'West Africa', commodity: 'Bauxite' },
+  { name: 'Kamsar', country: 'Guinea', unlocode: 'GNKMR', vf_code: 'GNKMR000',
+    region: 'West Africa', commodity: 'Bauxite' },
 ]
 
 interface VesselEntry {
