@@ -276,6 +276,32 @@ CREATE INDEX IF NOT EXISTS idx_trade_flows_region ON peru_trade_flows(region);
 CREATE INDEX IF NOT EXISTS idx_trade_flows_reporter ON peru_trade_flows(reporter_country);
 
 -- ============================================================
+-- FLOW ARCS — Bilateral commodity corridors (Phase 5)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS flow_arcs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  origin_country TEXT NOT NULL,
+  origin_port TEXT,
+  destination_country TEXT NOT NULL,
+  destination_port TEXT,
+  commodity TEXT NOT NULL,
+  commodity_category TEXT,
+  hs_code TEXT,
+  annual_volume_mt NUMERIC,            -- metric tons
+  annual_value_usd NUMERIC,
+  year INTEGER NOT NULL,
+  source TEXT NOT NULL DEFAULT 'un_comtrade',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_flow_arcs_origin ON flow_arcs(origin_country);
+CREATE INDEX IF NOT EXISTS idx_flow_arcs_dest ON flow_arcs(destination_country);
+CREATE INDEX IF NOT EXISTS idx_flow_arcs_commodity ON flow_arcs(commodity_category);
+CREATE INDEX IF NOT EXISTS idx_flow_arcs_year ON flow_arcs(year);
+CREATE INDEX IF NOT EXISTS idx_flow_arcs_value ON flow_arcs(annual_value_usd);
+
+-- ============================================================
 -- MIGRATION: Add global columns to existing table
 -- ============================================================
 

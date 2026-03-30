@@ -23,40 +23,40 @@ export default function GuidedTour() {
     const d = driver({
       showProgress: true,
       animate: true,
-      overlayColor: '#00263fcc',
+      overlayColor: '#0B0E13ee',
       stagePadding: 8,
-      stageRadius: 12,
+      stageRadius: 0,
       popoverClass: 'nautilus-tour',
       steps: [
         {
           popover: {
             title: 'Welcome to NAUTILUS',
             description:
-              'NAUTILUS tracks real copper and zinc moving out of Peru in real time. Here\u2019s how to read it.',
+              'Global commodity intelligence terminal. Real data from UN Comtrade, IMF PortWatch, and VesselFinder.',
+          },
+        },
+        {
+          element: '#nav-terminal',
+          popover: {
+            title: 'Terminal',
+            description:
+              'Query intelligence profiles for any vessel, company, commodity, country, or port.',
           },
         },
         {
           element: '#nav-feed',
           popover: {
-            title: 'Trade Flows',
+            title: 'Vessels',
             description:
-              'Annual trade flows. Peru exported $15.6B in copper ore to China in 2024. Each row is a real HS-code flow.',
+              'Live vessel activity feed. Real bulk carriers with IMO numbers, destinations, and confidence scores.',
           },
         },
         {
-          element: '#nav-map',
+          element: '#nav-global',
           popover: {
-            title: 'Ports & Routes',
+            title: 'Global Command Center',
             description:
-              'Daily vessel counts at Callao, Matarani, and Ilo \u2014 pulled from satellite AIS via IMF PortWatch. Updates every day.',
-          },
-        },
-        {
-          element: '#nav-dashboard',
-          popover: {
-            title: 'Vessels & Intelligence',
-            description:
-              'Live bulk carriers. These are real ships currently in port or expected. IMO numbers are real.',
+              'Deep-dive into any commodity. See exporters, importers, active regions, and trend data.',
           },
         },
         {
@@ -64,14 +64,14 @@ export default function GuidedTour() {
           popover: {
             title: 'Signals',
             description:
-              'Automated alerts. When a new entity enters a route or dominance shifts, you get flagged here. Route-confirmed signals tell you which ship is heading where.',
+              'Automated alerts for new entities, dominance shifts, route expansions, and confirmed routes.',
           },
         },
         {
           popover: {
             title: 'You\u2019re all set',
             description:
-              'That\u2019s it. Real data, zero cost. Click any row to drill in.',
+              'Real data, global coverage. Click any row to drill in.',
           },
         },
       ],
@@ -90,7 +90,7 @@ export default function GuidedTour() {
     <button
       onClick={startTour}
       aria-label="Start guided tour"
-      className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-11 h-11 sm:w-9 sm:h-9 rounded-full bg-[#e5e9eb] hover:bg-[#c2c7ce] text-[#42474e] text-sm font-semibold shadow-sm transition-colors duration-200 flex items-center justify-center"
+      className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-9 h-9 bg-[#121722] hover:bg-[#1a2030] text-[#6b7a8d] hover:text-[#C6A86B] text-sm font-semibold border border-[#1e2535] transition-colors duration-200 flex items-center justify-center"
       style={{ fontFamily: 'Manrope' }}
     >
       ?

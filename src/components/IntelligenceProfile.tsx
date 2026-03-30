@@ -34,7 +34,7 @@ export default function IntelligenceProfile({ profile }: IntelligenceProfileProp
 
   if (isEmpty) {
     return (
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
+      <div className="bg-gray-900 border border-gray-800  p-8 text-center">
         <div className="text-gray-500 text-lg mb-2">No intelligence found</div>
         <p className="text-gray-600 text-sm">
           No trade flow data matches &quot;{profile.entity}&quot;. Try a different search term,
@@ -47,7 +47,7 @@ export default function IntelligenceProfile({ profile }: IntelligenceProfileProp
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+      <div className="bg-gray-900 border border-gray-800  p-6">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-xl font-bold text-white font-mono tracking-wide">
             {profile.entity}
@@ -68,7 +68,7 @@ export default function IntelligenceProfile({ profile }: IntelligenceProfileProp
 
       {/* Observed Section */}
       {profile.observed.length > 0 && (
-        <div className="bg-gray-900 border border-blue-900/50 rounded-xl p-5">
+        <div className="bg-gray-900 border border-blue-900/50  p-5">
           <div className="flex items-center gap-2 mb-3">
             <SectionBadge section="observed" />
             <span className="text-xs text-gray-500">Direct records from structured public sources</span>
@@ -83,7 +83,7 @@ export default function IntelligenceProfile({ profile }: IntelligenceProfileProp
 
       {/* Enriched Section */}
       {profile.enriched.length > 0 && (
-        <div className="bg-gray-900 border border-purple-900/50 rounded-xl p-5">
+        <div className="bg-gray-900 border border-purple-900/50  p-5">
           <div className="flex items-center gap-2 mb-3">
             <SectionBadge section="enriched" />
             <span className="text-xs text-gray-500">Normalized and cross-source matched</span>
@@ -98,7 +98,7 @@ export default function IntelligenceProfile({ profile }: IntelligenceProfileProp
 
       {/* Inferred Section */}
       {profile.inferred.length > 0 && (
-        <div className="bg-gray-900 border border-orange-900/50 rounded-xl p-5">
+        <div className="bg-gray-900 border border-orange-900/50  p-5">
           <div className="flex items-center gap-2 mb-3">
             <SectionBadge section="inferred" />
             <span className="text-xs text-gray-500">COSMIC pipeline intelligence — always labeled as inferred</span>
@@ -113,7 +113,7 @@ export default function IntelligenceProfile({ profile }: IntelligenceProfileProp
 
       {/* Anomaly Flags */}
       {profile.anomalies.length > 0 && (
-        <div className="bg-gray-900 border border-red-900/50 rounded-xl p-5">
+        <div className="bg-gray-900 border border-red-900/50  p-5">
           <div className="flex items-center gap-2 mb-3">
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border bg-red-900/50 text-red-400 border-red-700">
               ANOMALY FLAGS
@@ -139,11 +139,11 @@ export default function IntelligenceProfile({ profile }: IntelligenceProfileProp
 
       {/* Chain View */}
       {profile.chain_view && profile.chain_view.length > 0 && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="bg-gray-900 border border-gray-800  p-5">
           <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wider">Chain View</h3>
           <div className="space-y-3">
             {profile.chain_view.map((chain, i) => (
-              <div key={i} className="bg-gray-800 rounded-lg p-3">
+              <div key={i} className="bg-gray-800  p-3">
                 <div className="flex items-center gap-2 text-sm font-mono text-gray-300 flex-wrap">
                   {chain.origin && <span className="text-gray-400">[{chain.origin}]</span>}
                   {chain.origin && <span className="text-gray-600">&#8594;</span>}

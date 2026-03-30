@@ -5,9 +5,12 @@ export type EntityType = 'vessel' | 'company' | 'port';
 export type AnomalyType = 'new_destination' | 'volume_spike' | 'new_counterparty' | 'flag_change';
 export type CommodityCategory =
   | 'copper_ore' | 'zinc_ore' | 'lead_ore' | 'copper_matte' | 'refined_copper'
-  | 'iron_ore' | 'coal' | 'soy' | 'nickel_ore' | 'cobalt' | 'platinum';
+  | 'iron_ore' | 'coal' | 'soy' | 'nickel_ore' | 'cobalt' | 'platinum'
+  | 'potash' | 'wheat' | 'corn' | 'fertilizer' | 'uranium' | 'bauxite'
+  | 'lng' | 'lithium_carbonate' | 'lithium_ore' | 'rare_earths' | 'crude_oil'
+  | 'alumina' | 'chromium' | 'manganese' | 'phosphate';
 export type IntelligenceSection = 'observed' | 'enriched' | 'inferred';
-export type Region = 'South America' | 'Asia-Pacific' | 'Africa' | 'Oceania';
+export type Region = 'South America' | 'Asia-Pacific' | 'Africa' | 'Oceania' | 'North America' | 'Europe/FSU' | 'West Africa' | 'Middle East';
 
 export interface ProvenanceRecord {
   source_name: string;
@@ -170,6 +173,22 @@ export interface TradeFlow {
   created_at?: string;
 }
 
+export interface FlowArc {
+  id?: string;
+  origin_country: string;
+  origin_port?: string;
+  destination_country: string;
+  destination_port?: string;
+  commodity: string;
+  commodity_category?: CommodityCategory;
+  hs_code?: string;
+  annual_volume_mt?: number;
+  annual_value_usd?: number;
+  year: number;
+  source: string;
+  created_at?: string;
+}
+
 export interface AnomalyFlag {
   id?: string;
   trade_flow_id?: string;
@@ -253,6 +272,41 @@ export const MINING_HS_CODES: Record<string, { description: string; category: Co
   // Cobalt
   '2605': { description: 'Cobalt ores and concentrates', category: 'cobalt' },
   '810520': { description: 'Cobalt mattes and intermediates', category: 'cobalt' },
+  // LNG / Natural Gas
+  '271121': { description: 'Natural gas, liquefied (LNG)', category: 'lng' },
+  '2711': { description: 'Petroleum gases', category: 'lng' },
+  // Lithium
+  '283691': { description: 'Lithium carbonate', category: 'lithium_carbonate' },
+  '260190': { description: 'Lithium ore / spodumene', category: 'lithium_ore' },
+  // Rare Earths
+  '280530': { description: 'Rare-earth metals', category: 'rare_earths' },
+  '2805': { description: 'Alkali/rare-earth metals', category: 'rare_earths' },
+  // Crude Oil
+  '270900': { description: 'Crude petroleum oil', category: 'crude_oil' },
+  '2709': { description: 'Petroleum oils, crude', category: 'crude_oil' },
+  // Alumina
+  '281820': { description: 'Aluminium oxide (alumina)', category: 'alumina' },
+  // Chromium
+  '261000': { description: 'Chromium ores and concentrates', category: 'chromium' },
+  '2610': { description: 'Chromium ores', category: 'chromium' },
+  // Manganese
+  '260200': { description: 'Manganese ores and concentrates', category: 'manganese' },
+  '2602': { description: 'Manganese ores', category: 'manganese' },
+  // Phosphate
+  '310510': { description: 'Mineral or chemical fertilizers (phosphatic)', category: 'phosphate' },
+  '3105': { description: 'Phosphatic fertilizers', category: 'phosphate' },
+  // Potash (already in global, adding HS here)
+  '310420': { description: 'Potash (KCl)', category: 'potash' },
+  // Wheat
+  '100190': { description: 'Wheat', category: 'wheat' },
+  // Corn
+  '100590': { description: 'Corn / Maize', category: 'corn' },
+  // Fertilizer
+  '310210': { description: 'Ammonium nitrate (fertilizer)', category: 'fertilizer' },
+  // Uranium
+  '261210': { description: 'Uranium ores', category: 'uranium' },
+  // Bauxite
+  '260600': { description: 'Bauxite (aluminium ore)', category: 'bauxite' },
 };
 
 // Legacy Peru port mapping (backwards compat)
@@ -292,6 +346,71 @@ export const GLOBAL_PORTS: Record<string, {
   // DRC
   'CDMAT': { name: 'Matadi', country: 'DRC', region: 'Africa', lat: -5.8167, lng: 13.4500, commodities: ['Cobalt', 'Copper'] },
   'CDBOM': { name: 'Boma', country: 'DRC', region: 'Africa', lat: -5.8500, lng: 13.0500, commodities: ['Cobalt'] },
+  // Canada
+  'CAVAN': { name: 'Vancouver', country: 'Canada', region: 'North America', lat: 49.2827, lng: -123.1207, commodities: ['Potash', 'Wheat'] },
+  'CAPRR': { name: 'Prince Rupert', country: 'Canada', region: 'North America', lat: 54.3150, lng: -130.3208, commodities: ['Wheat', 'Corn'] },
+  // Russia
+  'RUNVS': { name: 'Novorossiysk', country: 'Russia', region: 'Europe/FSU', lat: 44.7237, lng: 37.7685, commodities: ['Wheat', 'Fertilizer'] },
+  // Ukraine
+  'UAODS': { name: 'Odessa', country: 'Ukraine', region: 'Europe/FSU', lat: 46.4825, lng: 30.7233, commodities: ['Wheat', 'Corn'] },
+  // Kazakhstan
+  'KZAKU': { name: 'Aktau', country: 'Kazakhstan', region: 'Europe/FSU', lat: 43.6500, lng: 51.1500, commodities: ['Uranium', 'Wheat'] },
+  // Guinea
+  'GNCKY': { name: 'Conakry', country: 'Guinea', region: 'West Africa', lat: 9.5370, lng: -13.6785, commodities: ['Bauxite'] },
+
+  // ═══ DESTINATION HUBS ═══
+  // China
+  'CNQIN': { name: 'Qingdao', country: 'China', region: 'Asia-Pacific', lat: 36.0671, lng: 120.3826, commodities: ['Iron Ore', 'Coal', 'Copper'] },
+  'CNTJN': { name: 'Tianjin', country: 'China', region: 'Asia-Pacific', lat: 38.9860, lng: 117.7278, commodities: ['Iron Ore', 'Coal'] },
+  'CNSHA': { name: 'Shanghai', country: 'China', region: 'Asia-Pacific', lat: 31.2304, lng: 121.4737, commodities: ['Copper', 'Soy', 'LNG'] },
+  'CNNGB': { name: 'Ningbo', country: 'China', region: 'Asia-Pacific', lat: 29.8683, lng: 121.5440, commodities: ['Iron Ore', 'Copper'] },
+  'CNGZH': { name: 'Guangzhou', country: 'China', region: 'Asia-Pacific', lat: 23.1291, lng: 113.2644, commodities: ['Coal', 'LNG', 'Nickel'] },
+  // India
+  'INPRT': { name: 'Paradip', country: 'India', region: 'Asia-Pacific', lat: 20.3165, lng: 86.6114, commodities: ['Coal', 'Iron Ore', 'Chromium'] },
+  'INVTZ': { name: 'Vizag', country: 'India', region: 'Asia-Pacific', lat: 17.6868, lng: 83.2185, commodities: ['Coal', 'Manganese'] },
+  'INKDL': { name: 'Kandla', country: 'India', region: 'Asia-Pacific', lat: 23.0333, lng: 70.2167, commodities: ['Coal', 'Phosphate'] },
+  'INBOM': { name: 'Mumbai', country: 'India', region: 'Asia-Pacific', lat: 18.9220, lng: 72.8347, commodities: ['Crude Oil', 'LNG'] },
+  // Japan
+  'JPNGO': { name: 'Nagoya', country: 'Japan', region: 'Asia-Pacific', lat: 35.0891, lng: 136.8826, commodities: ['Iron Ore', 'Coal', 'LNG'] },
+  'JPUKB': { name: 'Kobe', country: 'Japan', region: 'Asia-Pacific', lat: 34.6901, lng: 135.1956, commodities: ['Copper', 'Iron Ore'] },
+  'JPYOK': { name: 'Yokohama', country: 'Japan', region: 'Asia-Pacific', lat: 35.4437, lng: 139.6380, commodities: ['LNG', 'Iron Ore'] },
+  // South Korea
+  'KRPOH': { name: 'Pohang', country: 'South Korea', region: 'Asia-Pacific', lat: 36.0190, lng: 129.3435, commodities: ['Iron Ore', 'Coal'] },
+  'KRKWG': { name: 'Gwangyang', country: 'South Korea', region: 'Asia-Pacific', lat: 34.9272, lng: 127.6961, commodities: ['Iron Ore', 'Coal'] },
+  'KRPUS': { name: 'Busan', country: 'South Korea', region: 'Asia-Pacific', lat: 35.1796, lng: 129.0756, commodities: ['Coal', 'LNG'] },
+  // Netherlands / Germany
+  'NLRTM': { name: 'Rotterdam', country: 'Netherlands', region: 'Europe/FSU', lat: 51.9244, lng: 4.4777, commodities: ['Iron Ore', 'Coal', 'LNG', 'Crude Oil'] },
+  'DEHAM': { name: 'Hamburg', country: 'Germany', region: 'Europe/FSU', lat: 53.5511, lng: 9.9937, commodities: ['Coal', 'Iron Ore', 'Copper'] },
+
+  // ═══ NEW SUPPLY CORRIDORS ═══
+  // Colombia — Coal
+  'COPBO': { name: 'Puerto Bolivar', country: 'Colombia', region: 'South America', lat: 12.2225, lng: -71.9648, commodities: ['Coal'] },
+  'COBAQ': { name: 'Barranquilla', country: 'Colombia', region: 'South America', lat: 10.9685, lng: -74.7813, commodities: ['Coal'] },
+  // Sweden — Iron Ore (exports via Narvik, Norway)
+  'NONVK': { name: 'Narvik', country: 'Sweden', region: 'Europe/FSU', lat: 68.4385, lng: 17.4272, commodities: ['Iron Ore'] },
+  // New Caledonia — Nickel
+  'NCNOU': { name: 'Noumea', country: 'New Caledonia', region: 'Oceania', lat: -22.2763, lng: 166.4580, commodities: ['Nickel'] },
+  // Mozambique — Coal + LNG
+  'MZBEW': { name: 'Beira', country: 'Mozambique', region: 'Africa', lat: -19.8436, lng: 34.8713, commodities: ['Coal'] },
+  'MZMNC': { name: 'Nacala', country: 'Mozambique', region: 'Africa', lat: -14.5429, lng: 40.6727, commodities: ['Coal', 'LNG'] },
+  // Zambia — Copper (via Dar es Salaam)
+  'TZDAR': { name: 'Dar es Salaam', country: 'Tanzania', region: 'Africa', lat: -6.7924, lng: 39.2083, commodities: ['Copper'] },
+  // Argentina — Lithium + Soy
+  'ARBUE': { name: 'Buenos Aires', country: 'Argentina', region: 'South America', lat: -34.6037, lng: -58.3816, commodities: ['Lithium', 'Soy'] },
+  'ARROS': { name: 'Rosario', country: 'Argentina', region: 'South America', lat: -32.9468, lng: -60.6393, commodities: ['Soy'] },
+  // Nigeria — LNG + Oil
+  'NGBON': { name: 'Bonny', country: 'Nigeria', region: 'West Africa', lat: 4.4266, lng: 7.1683, commodities: ['LNG', 'Crude Oil'] },
+  'NGLOS': { name: 'Lagos', country: 'Nigeria', region: 'West Africa', lat: 6.4531, lng: 3.3958, commodities: ['Crude Oil'] },
+  // Angola — Oil + LNG
+  'AOLAD': { name: 'Luanda', country: 'Angola', region: 'Africa', lat: -8.8390, lng: 13.2894, commodities: ['Crude Oil', 'LNG'] },
+  'AOSOY': { name: 'Soyo', country: 'Angola', region: 'Africa', lat: -6.1349, lng: 12.3714, commodities: ['LNG'] },
+  // Qatar — LNG
+  'QARAF': { name: 'Ras Laffan', country: 'Qatar', region: 'Middle East', lat: 25.9167, lng: 51.5333, commodities: ['LNG'] },
+  // Myanmar — Rare Earths
+  'MMRGN': { name: 'Yangon', country: 'Myanmar', region: 'Asia-Pacific', lat: 16.8661, lng: 96.1951, commodities: ['Rare Earths'] },
+  // Philippines — Nickel
+  'PHSUG': { name: 'Surigao', country: 'Philippines', region: 'Asia-Pacific', lat: 9.7571, lng: 125.5138, commodities: ['Nickel'] },
+  'PHGSA': { name: 'General Santos', country: 'Philippines', region: 'Asia-Pacific', lat: 6.1164, lng: 125.1716, commodities: ['Nickel'] },
 };
 
 // Commodity display config
@@ -307,4 +426,19 @@ export const COMMODITY_CONFIG: Record<string, { label: string; color: string; ic
   zinc_ore: { label: 'Zinc', color: '#a855f7', icon: 'hexagon' },
   lead_ore: { label: 'Lead', color: '#64748b', icon: 'weight' },
   platinum: { label: 'Platinum', color: '#e2e8f0', icon: 'star' },
+  potash: { label: 'Potash', color: '#f97316', icon: 'grain' },
+  wheat: { label: 'Wheat', color: '#eab308', icon: 'agriculture' },
+  corn: { label: 'Corn', color: '#84cc16', icon: 'eco' },
+  fertilizer: { label: 'Fertilizer', color: '#14b8a6', icon: 'spa' },
+  uranium: { label: 'Uranium', color: '#facc15', icon: 'radio_button_checked' },
+  bauxite: { label: 'Bauxite', color: '#dc2626', icon: 'terrain' },
+  lng: { label: 'LNG', color: '#06b6d4', icon: 'local_gas_station' },
+  lithium_carbonate: { label: 'Lithium', color: '#10b981', icon: 'battery_charging_full' },
+  lithium_ore: { label: 'Lithium Ore', color: '#059669', icon: 'battery_charging_full' },
+  rare_earths: { label: 'Rare Earths', color: '#d946ef', icon: 'auto_awesome' },
+  crude_oil: { label: 'Crude Oil', color: '#1e293b', icon: 'oil_barrel' },
+  alumina: { label: 'Alumina', color: '#f43f5e', icon: 'factory' },
+  chromium: { label: 'Chromium', color: '#7c3aed', icon: 'shield' },
+  manganese: { label: 'Manganese', color: '#be185d', icon: 'workspaces' },
+  phosphate: { label: 'Phosphate', color: '#0d9488', icon: 'compost' },
 };

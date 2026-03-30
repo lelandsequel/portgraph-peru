@@ -1,153 +1,155 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { TradeIntelligenceProfile, QueryType } from '@/lib/db/types';
-import IntelligenceProfile from '@/components/IntelligenceProfile';
+import { useState, useEffect } from 'react';
 
-const QUERY_TYPES: { value: QueryType; label: string; placeholder: string }[] = [
-  { value: 'vessel', label: 'Vessel', placeholder: 'Enter vessel name or IMO number...' },
-  { value: 'company', label: 'Company', placeholder: 'Enter exporter or importer name...' },
-  { value: 'commodity', label: 'Commodity', placeholder: 'copper, zinc, lead, or HS code...' },
-  { value: 'country', label: 'Country', placeholder: 'Enter destination or origin country...' },
-  { value: 'port', label: 'Port', placeholder: 'Callao, Matarani, PECLL, PEMRI...' },
+interface GlobalStats {
+  commodities: { category: string; commodity: string; shipment_count: number; total_value_usd: number }[];
+  corridors: { country: string; region: string; commodities: string[]; flow_count: number; value_usd: number }[];
+  regions: { name: string; countries: number; flow_count: number; value_usd: number }[];
+}
+
+const CORRIDORS_DISPLAY = [
+  { from: 'Chile', to: 'China', commodity: 'Copper', icon: 'bolt' },
+  { from: 'Australia', to: 'China', commodity: 'Iron Ore', icon: 'landscape' },
+  { from: 'Brazil', to: 'China', commodity: 'Soy', icon: 'grass' },
+  { from: 'Indonesia', to: 'India', commodity: 'Coal', icon: 'local_fire_department' },
+  { from: 'DRC', to: 'China', commodity: 'Cobalt', icon: 'science' },
+  { from: 'South Africa', to: 'India', commodity: 'Coal', icon: 'local_fire_department' },
+  { from: 'Peru', to: 'China', commodity: 'Copper', icon: 'bolt' },
+  { from: 'Canada', to: 'India', commodity: 'Potash', icon: 'grain' },
+  { from: 'Russia', to: 'China', commodity: 'Wheat', icon: 'agriculture' },
+  { from: 'Guinea', to: 'China', commodity: 'Bauxite', icon: 'terrain' },
 ];
 
-const EXAMPLE_QUERIES = [
-  { query: 'copper concentrate', type: 'commodity' as QueryType, label: 'Copper concentrate' },
-  { query: 'China', type: 'country' as QueryType, label: 'China flows' },
-  { query: 'zinc', type: 'commodity' as QueryType, label: 'Zinc ore' },
-  { query: 'Japan', type: 'country' as QueryType, label: 'Japan flows' },
-  { query: 'refined copper', type: 'commodity' as QueryType, label: 'Refined copper' },
+const NAV_SECTIONS = [
+  { href: '/terminal', icon: 'terminal', label: 'Terminal', desc: 'Query intelligence profiles' },
+  { href: '/feed', icon: 'directions_boat', label: 'Vessels', desc: 'Live vessel activity feed' },
+  { href: '/global', icon: 'public', label: 'Global Command', desc: 'Commodity deep-dives' },
+  { href: '/flows', icon: 'swap_calls', label: 'Flows', desc: 'Bilateral trade corridors' },
+  { href: '/signals', icon: 'notifications_active', label: 'Signals', desc: 'Automated trade alerts' },
+  { href: '/demand', icon: 'trending_up', label: 'Demand', desc: 'Importer intelligence' },
+  { href: '/map', icon: 'map', label: 'Route Map', desc: 'Port-to-destination routes' },
 ];
 
-export default function HomePage() {
-  const [query, setQuery] = useState('');
-  const [queryType, setQueryType] = useState<QueryType>('commodity');
-  const [profile, setProfile] = useState<TradeIntelligenceProfile | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+function formatValue(usd: number): string {
+  if (usd >= 1e9) return `$${(usd / 1e9).toFixed(1)}B`;
+  if (usd >= 1e6) return `$${(usd / 1e6).toFixed(0)}M`;
+  return `$${(usd / 1e3).toFixed(0)}K`;
+}
 
-  const executeQuery = useCallback(async (q: string, t: QueryType) => {
-    if (!q.trim()) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: q, type: t }),
-      });
-      if (!res.ok) throw new Error(`Query failed: ${res.status}`);
-      const data = await res.json();
-      setProfile(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Query failed');
-      setProfile(null);
-    } finally {
-      setLoading(false);
-    }
+export default function LandingPage() {
+  const [stats, setStats] = useState<GlobalStats | null>(null);
+
+  useEffect(() => {
+    fetch('/api/global')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => d && setStats(d))
+      .catch(() => {});
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    executeQuery(query, queryType);
-  };
-
-  const currentType = QUERY_TYPES.find(t => t.value === queryType)!;
+  const countryCount = stats ? new Set(stats.corridors.map(c => c.country)).size : 0;
+  const commodityCount = stats?.commodities.length || 0;
+  const totalFlows = stats?.commodities.reduce((s, c) => s + c.shipment_count, 0) || 0;
+  const totalValue = stats?.commodities.reduce((s, c) => s + c.total_value_usd, 0) || 0;
 
   return (
-    <div className="p-4 sm:p-10 max-w-4xl">
-      {/* Header */}
-      <div className="mb-6 sm:mb-10">
-        <h1 className="text-xl sm:text-3xl font-thin tracking-wide text-[#00263f] mb-2" style={{ fontFamily: 'Sora, Manrope' }}>
-          Trade Intelligence
+    <div className="p-4 sm:p-8 max-w-6xl mx-auto">
+      {/* Hero */}
+      <div className="py-8 sm:py-14">
+        <h1 className="text-3xl sm:text-5xl font-thin tracking-wide text-[#C6A86B] mb-3" style={{ fontFamily: 'Sora, Manrope' }}>
+          NAUTILUS
         </h1>
-        <p className="text-[#72777e] text-sm leading-relaxed max-w-xl">
-          Enter a vessel, company, commodity, country, or port.
-          Returns a confidence-scored intelligence profile with observed, enriched, and inferred data.
+        <p className="text-lg sm:text-xl text-[#8a9bb0] font-light mb-1" style={{ fontFamily: 'Manrope' }}>
+          Global Commodity Intelligence
+        </p>
+        <p className="text-sm text-[#6b7a8d] max-w-2xl leading-relaxed">
+          Real-time tracking of bulk commodity movements across every major corridor.
+          Confidence-scored intelligence from UN Comtrade, IMF PortWatch, and VesselFinder.
         </p>
       </div>
 
-      {/* Search */}
-      <form onSubmit={handleSubmit} className="mb-8">
-        <div className="bg-white rounded-2xl shadow-[0_2px_12px_rgba(24,28,30,0.08)] p-6">
-          {/* Type tabs */}
-          <div className="flex flex-wrap gap-2 mb-5">
-            {QUERY_TYPES.map(t => (
-              <button
-                key={t.value}
-                type="button"
-                onClick={() => setQueryType(t.value)}
-                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
-                  queryType === t.value
-                    ? 'bg-[#00263f] text-white'
-                    : 'bg-[#f1f4f6] text-[#42474e] hover:bg-[#e5e9eb]'
-                }`}
-                style={{ fontFamily: 'Manrope' }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+      {/* Live stats bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[#1e2535] mb-10">
+        <StatCell label="Countries" value={countryCount > 0 ? String(countryCount) : '—'} />
+        <StatCell label="Commodities" value={commodityCount > 0 ? String(commodityCount) : '—'} />
+        <StatCell label="Trade Flows" value={totalFlows > 0 ? totalFlows.toLocaleString() : '—'} />
+        <StatCell label="Total Value" value={totalValue > 0 ? formatValue(totalValue) : '—'} />
+      </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="text"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder={currentType.placeholder}
-              className="flex-1 bg-[#f1f4f6] border-none rounded-full px-5 py-3 text-base sm:text-sm text-[#181c1e] placeholder:text-[#72777e]/60 focus:outline-none focus:ring-2 focus:ring-[#006a62]/20 min-h-[44px]"
-            />
-            <button
-              type="submit"
-              disabled={loading || !query.trim()}
-              className="px-8 py-3 bg-[#00263f] text-white rounded-full text-sm font-medium hover:bg-[#0b3c5d] disabled:opacity-40 transition-colors min-h-[44px]"
-              style={{ fontFamily: 'Manrope' }}
+      {/* Quick navigation */}
+      <div className="mb-10">
+        <h2 className="text-xs font-semibold text-[#4C6A92] uppercase tracking-[0.15em] mb-4" style={{ fontFamily: 'Manrope' }}>
+          Navigate
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-[#1e2535]">
+          {NAV_SECTIONS.map(s => (
+            <a
+              key={s.href}
+              href={s.href}
+              className="bg-[#121722] p-4 hover:bg-[#1a2030] transition-colors group"
             >
-              {loading ? 'Querying...' : 'Query'}
-            </button>
-          </div>
+              <div className="flex items-center gap-3 mb-1.5">
+                <span className="material-symbols-outlined text-[#4C6A92] group-hover:text-[#C6A86B] transition-colors" style={{ fontSize: '18px' }}>{s.icon}</span>
+                <span className="text-sm font-medium text-[#e0e6ed]" style={{ fontFamily: 'Manrope' }}>{s.label}</span>
+              </div>
+              <p className="text-[11px] text-[#6b7a8d]">{s.desc}</p>
+            </a>
+          ))}
         </div>
-      </form>
+      </div>
 
-      {/* Example queries */}
-      {!profile && !loading && (
-        <div className="mb-8">
-          <p className="text-xs text-[#72777e] uppercase tracking-widest mb-3 font-medium" style={{ fontFamily: 'Manrope' }}>
-            Try these
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {EXAMPLE_QUERIES.map(ex => (
-              <button
-                key={ex.query}
-                onClick={() => {
-                  setQuery(ex.query);
-                  setQueryType(ex.type);
-                  executeQuery(ex.query, ex.type);
-                }}
-                className="px-4 py-1.5 bg-white rounded-full text-xs text-[#42474e] hover:bg-[#e5e9eb] transition-colors shadow-sm"
-                style={{ fontFamily: 'Manrope' }}
-              >
-                {ex.label}
-              </button>
-            ))}
-          </div>
+      {/* What NAUTILUS tracks */}
+      <div className="mb-10">
+        <h2 className="text-xs font-semibold text-[#4C6A92] uppercase tracking-[0.15em] mb-4" style={{ fontFamily: 'Manrope' }}>
+          Active Corridors
+        </h2>
+        <div className="bg-[#121722] border border-[#1e2535] overflow-x-auto">
+          <table className="w-full text-sm min-w-[500px]">
+            <thead>
+              <tr className="border-b border-[#1e2535]">
+                <th className="text-left px-4 py-2.5 text-[9px] text-[#6b7a8d] uppercase tracking-wider font-medium" style={{ fontFamily: 'Manrope' }}>Commodity</th>
+                <th className="text-left px-4 py-2.5 text-[9px] text-[#6b7a8d] uppercase tracking-wider font-medium" style={{ fontFamily: 'Manrope' }}>Origin</th>
+                <th className="text-center px-4 py-2.5 text-[9px] text-[#6b7a8d] uppercase tracking-wider font-medium" style={{ fontFamily: 'Manrope' }}></th>
+                <th className="text-left px-4 py-2.5 text-[9px] text-[#6b7a8d] uppercase tracking-wider font-medium" style={{ fontFamily: 'Manrope' }}>Destination</th>
+              </tr>
+            </thead>
+            <tbody>
+              {CORRIDORS_DISPLAY.map((c, i) => (
+                <tr key={i} className="border-b border-[#1e2535]/50 hover:bg-[#1a2030] transition-colors">
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[#4C6A92]" style={{ fontSize: '14px' }}>{c.icon}</span>
+                      <span className="text-[#e0e6ed] text-xs" style={{ fontFamily: 'Manrope' }}>{c.commodity}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-2.5 text-xs text-[#8a9bb0]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{c.from}</td>
+                  <td className="px-4 py-2.5 text-center text-[#4C6A92] text-xs">→</td>
+                  <td className="px-4 py-2.5 text-xs text-[#C6A86B]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{c.to}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
 
-      {error && (
-        <div className="bg-[#ffdad6] text-[#ba1a1a] rounded-lg px-5 py-4 text-sm mb-6">
-          {error}
+      {/* Data sources */}
+      <div className="border-t border-[#1e2535] pt-6 pb-4">
+        <div className="flex flex-wrap gap-6 text-[10px] text-[#6b7a8d]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+          <span>UN Comtrade bilateral trade</span>
+          <span>IMF PortWatch satellite AIS</span>
+          <span>VesselFinder vessel registry</span>
+          <span>HS code classification</span>
         </div>
-      )}
+      </div>
+    </div>
+  );
+}
 
-      {loading && (
-        <div className="flex items-center justify-center py-16">
-          <div className="w-8 h-8 border-2 border-[#006a62]/30 border-t-[#006a62] rounded-full animate-spin" />
-        </div>
-      )}
-
-      {profile && !loading && <IntelligenceProfile profile={profile} />}
+function StatCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-[#121722] p-4">
+      <p className="text-[9px] text-[#6b7a8d] uppercase tracking-wider mb-1" style={{ fontFamily: 'Manrope' }}>{label}</p>
+      <p className="text-xl font-semibold text-[#e0e6ed]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{value}</p>
     </div>
   );
 }

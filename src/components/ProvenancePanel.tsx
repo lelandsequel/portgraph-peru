@@ -70,7 +70,7 @@ export default function ProvenancePanel({ provenance, confidence_score, confiden
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 mt-1 right-0 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-gray-900 border border-gray-700 rounded-lg shadow-xl p-4">
+        <div className="absolute z-50 mt-1 right-0 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-gray-900 border border-gray-700 shadow-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold text-gray-200">Provenance Chain</h4>
             <button onClick={() => setIsOpen(false)} className="text-gray-500 hover:text-gray-300">

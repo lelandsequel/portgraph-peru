@@ -2,8 +2,10 @@
  * NAUTILUS — Global UN Comtrade Ingestion
  *
  * Source: UN Comtrade Public Preview API (no API key required)
- * Reporters: Chile, Australia, Brazil, Indonesia, South Africa, DRC, Canada, Russia, Ukraine, Kazakhstan, Guinea
- * Commodities: Copper, Iron Ore, Coal, Soy, Nickel, Cobalt, Zinc, Potash, Wheat, Fertilizer, Uranium, Bauxite
+ * Reporters: Chile, Australia, Brazil, Indonesia, South Africa, DRC, Canada, Russia, Ukraine, Kazakhstan, Guinea,
+ *            Colombia, Sweden, New Caledonia, Mozambique, Zambia, Argentina, Bolivia, Nigeria, Angola, Qatar, Myanmar, Philippines
+ * Commodities: Copper, Iron Ore, Coal, Soy, Nickel, Cobalt, Zinc, Potash, Wheat, Fertilizer, Uranium, Bauxite,
+ *              LNG, Lithium, Rare Earths, Crude Oil
  *
  * Endpoint: https://comtradeapi.un.org/public/v1/preview/C/A/HS
  *
@@ -30,6 +32,19 @@ const REPORTERS = [
   { code: 804, name: 'Ukraine', region: 'Europe/FSU', port: 'Odessa', unlocode: 'UAODS' },
   { code: 398, name: 'Kazakhstan', region: 'Europe/FSU', port: 'Aktau', unlocode: 'KZAKU' },
   { code: 324, name: 'Guinea', region: 'West Africa', port: 'Conakry', unlocode: 'GNCKY' },
+  // Phase 5 — New supply corridors
+  { code: 170, name: 'Colombia', region: 'South America', port: 'Puerto Bolivar', unlocode: 'COPBO' },
+  { code: 752, name: 'Sweden', region: 'Europe/FSU', port: 'Narvik', unlocode: 'NONVK' },
+  { code: 540, name: 'New Caledonia', region: 'Oceania', port: 'Noumea', unlocode: 'NCNOU' },
+  { code: 508, name: 'Mozambique', region: 'Africa', port: 'Beira', unlocode: 'MZBEW' },
+  { code: 894, name: 'Zambia', region: 'Africa', port: 'Dar es Salaam', unlocode: 'TZDAR' },
+  { code: 32,  name: 'Argentina', region: 'South America', port: 'Buenos Aires', unlocode: 'ARBUE' },
+  { code: 68,  name: 'Bolivia', region: 'South America', port: 'Arica', unlocode: 'CLARI' },
+  { code: 566, name: 'Nigeria', region: 'West Africa', port: 'Bonny', unlocode: 'NGBON' },
+  { code: 24,  name: 'Angola', region: 'Africa', port: 'Luanda', unlocode: 'AOLAD' },
+  { code: 634, name: 'Qatar', region: 'Middle East', port: 'Ras Laffan', unlocode: 'QARAF' },
+  { code: 104, name: 'Myanmar', region: 'Asia-Pacific', port: 'Yangon', unlocode: 'MMRGN' },
+  { code: 608, name: 'Philippines', region: 'Asia-Pacific', port: 'Surigao', unlocode: 'PHSUG' },
 ]
 
 // HS codes by country specialization
@@ -80,6 +95,48 @@ const COUNTRY_HS: Record<string, { code: string; commodity: string; category: st
   Guinea: [
     { code: '260600', commodity: 'Bauxite (Aluminium Ore)', category: 'bauxite' },
   ],
+  // Phase 5 — New supply corridors
+  Colombia: [
+    { code: '270112', commodity: 'Coal (Bituminous)', category: 'coal' },
+  ],
+  Sweden: [
+    { code: '260111', commodity: 'Iron Ore', category: 'iron_ore' },
+  ],
+  'New Caledonia': [
+    { code: '260400', commodity: 'Nickel Ore', category: 'nickel_ore' },
+  ],
+  Mozambique: [
+    { code: '270112', commodity: 'Coal (Bituminous)', category: 'coal' },
+    { code: '271121', commodity: 'LNG', category: 'lng' },
+  ],
+  Zambia: [
+    { code: '260300', commodity: 'Copper Ore', category: 'copper_ore' },
+    { code: '740311', commodity: 'Refined Copper', category: 'refined_copper' },
+  ],
+  Argentina: [
+    { code: '283691', commodity: 'Lithium Carbonate', category: 'lithium_carbonate' },
+    { code: '120190', commodity: 'Soybeans', category: 'soy' },
+  ],
+  Bolivia: [
+    { code: '283691', commodity: 'Lithium Carbonate', category: 'lithium_carbonate' },
+  ],
+  Nigeria: [
+    { code: '271121', commodity: 'LNG', category: 'lng' },
+    { code: '270900', commodity: 'Crude Oil', category: 'crude_oil' },
+  ],
+  Angola: [
+    { code: '270900', commodity: 'Crude Oil', category: 'crude_oil' },
+    { code: '271121', commodity: 'LNG', category: 'lng' },
+  ],
+  Qatar: [
+    { code: '271121', commodity: 'LNG', category: 'lng' },
+  ],
+  Myanmar: [
+    { code: '280530', commodity: 'Rare Earths', category: 'rare_earths' },
+  ],
+  Philippines: [
+    { code: '260400', commodity: 'Nickel Ore', category: 'nickel_ore' },
+  ],
 }
 
 // Port assignment per commodity+country
@@ -129,6 +186,47 @@ const PORT_ASSIGN: Record<string, Record<string, { port: string; unlocode: strin
   },
   Guinea: {
     bauxite: { port: 'Conakry', unlocode: 'GNCKY' },
+  },
+  Colombia: {
+    coal: { port: 'Puerto Bolivar', unlocode: 'COPBO' },
+  },
+  Sweden: {
+    iron_ore: { port: 'Narvik', unlocode: 'NONVK' },
+  },
+  'New Caledonia': {
+    nickel_ore: { port: 'Noumea', unlocode: 'NCNOU' },
+  },
+  Mozambique: {
+    coal: { port: 'Beira', unlocode: 'MZBEW' },
+    lng: { port: 'Nacala', unlocode: 'MZMNC' },
+  },
+  Zambia: {
+    copper_ore: { port: 'Dar es Salaam', unlocode: 'TZDAR' },
+    refined_copper: { port: 'Dar es Salaam', unlocode: 'TZDAR' },
+  },
+  Argentina: {
+    lithium_carbonate: { port: 'Buenos Aires', unlocode: 'ARBUE' },
+    soy: { port: 'Rosario', unlocode: 'ARROS' },
+  },
+  Bolivia: {
+    lithium_carbonate: { port: 'Arica', unlocode: 'CLARI' },
+  },
+  Nigeria: {
+    lng: { port: 'Bonny', unlocode: 'NGBON' },
+    crude_oil: { port: 'Lagos', unlocode: 'NGLOS' },
+  },
+  Angola: {
+    crude_oil: { port: 'Luanda', unlocode: 'AOLAD' },
+    lng: { port: 'Soyo', unlocode: 'AOSOY' },
+  },
+  Qatar: {
+    lng: { port: 'Ras Laffan', unlocode: 'QARAF' },
+  },
+  Myanmar: {
+    rare_earths: { port: 'Yangon', unlocode: 'MMRGN' },
+  },
+  Philippines: {
+    nickel_ore: { port: 'Surigao', unlocode: 'PHSUG' },
   },
 }
 
