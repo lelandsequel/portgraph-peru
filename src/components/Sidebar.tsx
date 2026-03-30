@@ -49,6 +49,7 @@ export default function Sidebar() {
         <NavLink href="/feed" icon="directions_boat" label="Trade Feed" id="nav-feed" onClick={() => setOpen(false)} />
         <NavLink href="/map" icon="anchor" label="Route Map" id="nav-map" onClick={() => setOpen(false)} />
         <NavLink href="/signals" icon="notifications_active" label="Signals" id="nav-signals" onClick={() => setOpen(false)} />
+        <NavLink href="/global" icon="public" label="Global" id="nav-global" onClick={() => setOpen(false)} />
 
         <div className="pt-8 pb-2">
           <p className="px-4 text-[10px] uppercase tracking-widest text-[#72777e] font-bold" style={{ fontFamily: 'Manrope' }}>Intelligence</p>
@@ -60,7 +61,7 @@ export default function Sidebar() {
         <div className="flex items-center gap-3 px-4 py-3 rounded-lg">
           <span className="material-symbols-outlined text-[#72777e] text-lg">verified_user</span>
           <div>
-            <p className="text-xs font-semibold text-[#00263f] uppercase tracking-tighter" style={{ fontFamily: 'Manrope' }}>Phase 3</p>
+            <p className="text-xs font-semibold text-[#00263f] uppercase tracking-tighter" style={{ fontFamily: 'Manrope' }}>Phase 4</p>
             <p className="text-[10px] text-[#72777e]">Live</p>
           </div>
         </div>

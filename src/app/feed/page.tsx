@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ConfidenceDots, ConfidenceBadge } from '@/components/ProvenancePanel';
-import { TradeFlow } from '@/lib/db/types';
+import { TradeFlow, GLOBAL_PORTS } from '@/lib/db/types';
 
 export default function TradeFeedPage() {
   const [flows, setFlows] = useState<TradeFlow[]>([]);
   const [loading, setLoading] = useState(true);
   const [portFilter, setPortFilter] = useState<string>('all');
   const [confidenceFilter, setConfidenceFilter] = useState<string>('all');
+  const [countryFilter, setCountryFilter] = useState<string>('all');
 
   useEffect(() => {
     async function loadFeed() {
@@ -29,9 +30,12 @@ export default function TradeFeedPage() {
     loadFeed();
   }, []);
 
+  const countries = Array.from(new Set(flows.map(f => f.reporter_country || f.origin_country).filter(Boolean))) as string[];
+
   const filteredFlows = flows.filter(f => {
     if (portFilter !== 'all' && f.peru_port_unlocode !== portFilter) return false;
     if (confidenceFilter !== 'all' && f.confidence_tier !== confidenceFilter) return false;
+    if (countryFilter !== 'all' && (f.reporter_country || f.origin_country) !== countryFilter) return false;
     return true;
   });
 
@@ -40,7 +44,7 @@ export default function TradeFeedPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-10">
         <div>
           <h1 className="text-xl sm:text-2xl font-thin tracking-wide text-[#00263f]" style={{ fontFamily: 'Sora, Manrope' }}>Trade Feed</h1>
-          <p className="text-[#72777e] text-sm mt-1">Chronological vessel activity at Callao + Matarani</p>
+          <p className="text-[#72777e] text-sm mt-1">Chronological vessel activity across global ports</p>
         </div>
         <div className="flex items-center gap-3">
           <select
@@ -49,8 +53,19 @@ export default function TradeFeedPage() {
             className="bg-white border-none rounded-full px-4 py-2 text-sm text-[#42474e] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#006a62]/20 min-h-[44px]"
           >
             <option value="all">All Ports</option>
-            <option value="PECLL">Callao</option>
-            <option value="PEMRI">Matarani</option>
+            {Object.entries(GLOBAL_PORTS).map(([code, info]) => (
+              <option key={code} value={code}>{info.name} ({info.country})</option>
+            ))}
+          </select>
+          <select
+            value={countryFilter}
+            onChange={e => setCountryFilter(e.target.value)}
+            className="bg-white border-none rounded-full px-4 py-2 text-sm text-[#42474e] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#006a62]/20 min-h-[44px]"
+          >
+            <option value="all">All Countries</option>
+            {countries.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
           </select>
           <select
             value={confidenceFilter}

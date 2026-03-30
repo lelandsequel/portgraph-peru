@@ -1,6 +1,6 @@
--- PortGraph Peru — Phase 1 Schema
--- Ports: Callao (PECLL) + Matarani (PEMRI)
--- Commodity: Mining exports (copper, zinc, lead)
+-- NAUTILUS — Global Bulk Commodity Intelligence Schema
+-- Phase 4: Global expansion — Chile, Australia, Brazil, Indonesia, South Africa, DRC
+-- Commodity: Copper, Iron Ore, Coal, Soy, Nickel, Cobalt, Zinc
 
 -- ============================================================
 -- RAW INGESTED DATA
@@ -199,6 +199,10 @@ CREATE TABLE IF NOT EXISTS peru_trade_flows (
   arrival_time TIMESTAMPTZ,
   departure_time TIMESTAMPTZ,
 
+  -- Global expansion (Phase 4)
+  region TEXT,                           -- 'South America' | 'Asia-Pacific' | 'Africa' | 'Oceania'
+  reporter_country TEXT,                 -- ISO name: 'Peru' | 'Chile' | 'Australia' | 'Brazil' | etc.
+
   -- Chain match metadata
   match_method TEXT,                    -- 'full_match' | 'vessel_time' | 'port_commodity' | 'inferred'
   match_details JSONB DEFAULT '{}',
@@ -266,3 +270,17 @@ CREATE INDEX IF NOT EXISTS idx_anomalies_flow ON anomaly_flags(trade_flow_id);
 
 CREATE INDEX IF NOT EXISTS idx_raw_vessels_port ON raw_vessel_calls(port_unlocode);
 CREATE INDEX IF NOT EXISTS idx_raw_manifests_port ON raw_cargo_manifests(port_unlocode);
+
+-- Global expansion indexes (Phase 4)
+CREATE INDEX IF NOT EXISTS idx_trade_flows_region ON peru_trade_flows(region);
+CREATE INDEX IF NOT EXISTS idx_trade_flows_reporter ON peru_trade_flows(reporter_country);
+
+-- ============================================================
+-- MIGRATION: Add global columns to existing table
+-- ============================================================
+
+DO $$ BEGIN
+  ALTER TABLE peru_trade_flows ADD COLUMN IF NOT EXISTS region TEXT;
+  ALTER TABLE peru_trade_flows ADD COLUMN IF NOT EXISTS reporter_country TEXT;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;

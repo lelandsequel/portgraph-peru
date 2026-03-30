@@ -1,10 +1,13 @@
-// PortGraph Peru — Core Types
+// NAUTILUS — Global Bulk Commodity Intelligence Types
 
 export type ConfidenceTier = 'HIGH' | 'MEDIUM' | 'LOW';
 export type EntityType = 'vessel' | 'company' | 'port';
 export type AnomalyType = 'new_destination' | 'volume_spike' | 'new_counterparty' | 'flag_change';
-export type CommodityCategory = 'copper_ore' | 'zinc_ore' | 'lead_ore' | 'copper_matte' | 'refined_copper';
+export type CommodityCategory =
+  | 'copper_ore' | 'zinc_ore' | 'lead_ore' | 'copper_matte' | 'refined_copper'
+  | 'iron_ore' | 'coal' | 'soy' | 'nickel_ore' | 'cobalt' | 'platinum';
 export type IntelligenceSection = 'observed' | 'enriched' | 'inferred';
+export type Region = 'South America' | 'Asia-Pacific' | 'Africa' | 'Oceania';
 
 export interface ProvenanceRecord {
   source_name: string;
@@ -155,6 +158,8 @@ export interface TradeFlow {
   destination_country?: string;
   arrival_time?: string;
   departure_time?: string;
+  region?: string;
+  reporter_country?: string;
   match_method?: string;
   match_details?: Record<string, unknown>;
   confidence_score: number;
@@ -214,23 +219,92 @@ export interface IntelligenceQuery {
   type: QueryType;
 }
 
-// HS Code mapping for mining commodities
+// HS Code mapping for mining + bulk commodities (global)
 export const MINING_HS_CODES: Record<string, { description: string; category: CommodityCategory }> = {
+  // Copper
   '2603': { description: 'Copper ores and concentrates', category: 'copper_ore' },
   '260300': { description: 'Copper ores and concentrates', category: 'copper_ore' },
-  '2608': { description: 'Zinc ores and concentrates', category: 'zinc_ore' },
-  '260800': { description: 'Zinc ores and concentrates', category: 'zinc_ore' },
-  '2607': { description: 'Lead ores and concentrates', category: 'lead_ore' },
-  '260700': { description: 'Lead ores and concentrates', category: 'lead_ore' },
   '7401': { description: 'Copper mattes; cement copper', category: 'copper_matte' },
   '740100': { description: 'Copper mattes; cement copper', category: 'copper_matte' },
   '7403': { description: 'Refined copper and alloys, unwrought', category: 'refined_copper' },
   '740311': { description: 'Refined copper cathodes', category: 'refined_copper' },
   '740319': { description: 'Other refined copper, unwrought', category: 'refined_copper' },
+  // Zinc
+  '2608': { description: 'Zinc ores and concentrates', category: 'zinc_ore' },
+  '260800': { description: 'Zinc ores and concentrates', category: 'zinc_ore' },
+  // Lead
+  '2607': { description: 'Lead ores and concentrates', category: 'lead_ore' },
+  '260700': { description: 'Lead ores and concentrates', category: 'lead_ore' },
+  // Iron Ore
+  '2601': { description: 'Iron ores and concentrates', category: 'iron_ore' },
+  '260111': { description: 'Iron ore, non-agglomerated', category: 'iron_ore' },
+  '260112': { description: 'Iron ore, agglomerated', category: 'iron_ore' },
+  // Coal
+  '2701': { description: 'Coal', category: 'coal' },
+  '270112': { description: 'Bituminous coal', category: 'coal' },
+  '270119': { description: 'Other coal', category: 'coal' },
+  // Soy
+  '1201': { description: 'Soybeans', category: 'soy' },
+  '120100': { description: 'Soybeans', category: 'soy' },
+  '120190': { description: 'Soybeans, other', category: 'soy' },
+  // Nickel
+  '2604': { description: 'Nickel ores and concentrates', category: 'nickel_ore' },
+  '260400': { description: 'Nickel ores and concentrates', category: 'nickel_ore' },
+  // Cobalt
+  '2605': { description: 'Cobalt ores and concentrates', category: 'cobalt' },
+  '810520': { description: 'Cobalt mattes and intermediates', category: 'cobalt' },
 };
 
-// Port mapping
+// Legacy Peru port mapping (backwards compat)
 export const PERU_PORTS: Record<string, { name: string; name_es: string; lat: number; lng: number }> = {
   'PECLL': { name: 'Callao', name_es: 'El Callao', lat: -12.0464, lng: -77.1425 },
   'PEMRI': { name: 'Matarani', name_es: 'Matarani', lat: -17.0003, lng: -72.1044 },
+};
+
+// Global port registry
+export const GLOBAL_PORTS: Record<string, {
+  name: string; country: string; region: Region;
+  lat: number; lng: number; commodities: string[];
+}> = {
+  // Peru
+  'PECLL': { name: 'Callao', country: 'Peru', region: 'South America', lat: -12.0464, lng: -77.1425, commodities: ['Copper', 'Zinc'] },
+  'PEMRI': { name: 'Matarani', country: 'Peru', region: 'South America', lat: -17.0003, lng: -72.1044, commodities: ['Copper'] },
+  'PEILO': { name: 'Ilo', country: 'Peru', region: 'South America', lat: -17.6394, lng: -71.3375, commodities: ['Copper'] },
+  // Chile
+  'CLANT': { name: 'Antofagasta', country: 'Chile', region: 'South America', lat: -23.6509, lng: -70.3975, commodities: ['Copper'] },
+  'CLIQQ': { name: 'Iquique', country: 'Chile', region: 'South America', lat: -20.2141, lng: -70.1524, commodities: ['Copper'] },
+  'CLMJS': { name: 'Mejillones', country: 'Chile', region: 'South America', lat: -23.1000, lng: -70.4500, commodities: ['Copper'] },
+  // Australia
+  'AUPHE': { name: 'Port Hedland', country: 'Australia', region: 'Oceania', lat: -20.3106, lng: 118.6017, commodities: ['Iron Ore'] },
+  'AUNTL': { name: 'Newcastle', country: 'Australia', region: 'Oceania', lat: -32.9283, lng: 151.7817, commodities: ['Coal'] },
+  'AUGLT': { name: 'Gladstone', country: 'Australia', region: 'Oceania', lat: -23.8489, lng: 151.2872, commodities: ['Coal'] },
+  // Brazil
+  'BRSSZ': { name: 'Santos', country: 'Brazil', region: 'South America', lat: -23.9608, lng: -46.3336, commodities: ['Soy', 'Iron Ore'] },
+  'BRVIX': { name: 'Tubarão', country: 'Brazil', region: 'South America', lat: -20.2867, lng: -40.2858, commodities: ['Iron Ore'] },
+  'BRPNG': { name: 'Paranaguá', country: 'Brazil', region: 'South America', lat: -25.5161, lng: -48.5225, commodities: ['Soy'] },
+  // Indonesia
+  'IDSMR': { name: 'Samarinda', country: 'Indonesia', region: 'Asia-Pacific', lat: -0.5022, lng: 117.1536, commodities: ['Coal'] },
+  'IDBPN': { name: 'Balikpapan', country: 'Indonesia', region: 'Asia-Pacific', lat: -1.2654, lng: 116.8312, commodities: ['Coal'] },
+  'IDMRW': { name: 'Morowali', country: 'Indonesia', region: 'Asia-Pacific', lat: -2.4000, lng: 121.6000, commodities: ['Nickel'] },
+  // South Africa
+  'ZARCB': { name: 'Richards Bay', country: 'South Africa', region: 'Africa', lat: -28.7830, lng: 32.0377, commodities: ['Coal', 'Platinum'] },
+  'ZADUR': { name: 'Durban', country: 'South Africa', region: 'Africa', lat: -29.8587, lng: 31.0218, commodities: ['Coal'] },
+  // DRC
+  'CDMAT': { name: 'Matadi', country: 'DRC', region: 'Africa', lat: -5.8167, lng: 13.4500, commodities: ['Cobalt', 'Copper'] },
+  'CDBOM': { name: 'Boma', country: 'DRC', region: 'Africa', lat: -5.8500, lng: 13.0500, commodities: ['Cobalt'] },
+};
+
+// Commodity display config
+export const COMMODITY_CONFIG: Record<string, { label: string; color: string; icon: string }> = {
+  copper_ore: { label: 'Copper', color: '#f59e0b', icon: 'bolt' },
+  refined_copper: { label: 'Copper', color: '#f59e0b', icon: 'bolt' },
+  copper_matte: { label: 'Copper', color: '#f59e0b', icon: 'bolt' },
+  iron_ore: { label: 'Iron Ore', color: '#ef4444', icon: 'landscape' },
+  coal: { label: 'Coal', color: '#6b7280', icon: 'local_fire_department' },
+  soy: { label: 'Soy', color: '#22c55e', icon: 'grass' },
+  nickel_ore: { label: 'Nickel', color: '#8b5cf6', icon: 'diamond' },
+  cobalt: { label: 'Cobalt', color: '#3b82f6', icon: 'science' },
+  zinc_ore: { label: 'Zinc', color: '#a855f7', icon: 'hexagon' },
+  lead_ore: { label: 'Lead', color: '#64748b', icon: 'weight' },
+  platinum: { label: 'Platinum', color: '#e2e8f0', icon: 'star' },
 };

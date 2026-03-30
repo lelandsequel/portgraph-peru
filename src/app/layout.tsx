@@ -4,8 +4,8 @@ import GuidedTour from '@/components/GuidedTour';
 import Sidebar from '@/components/Sidebar';
 
 export const metadata: Metadata = {
-  title: 'NAUTILUS — Peru Maritime Intelligence',
-  description: 'Confidence-scored maritime trade intelligence for Peru\'s export corridors',
+  title: 'NAUTILUS — Global Bulk Commodity Intelligence',
+  description: 'Confidence-scored maritime trade intelligence across global commodity corridors',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -39,8 +39,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <span className="text-xs font-mono text-[#006a62] bg-[#006a62]/10 px-3 py-1 rounded-full">LIVE</span>
                 <div className="h-6 w-px bg-[#e0e3e5]" />
                 <div className="text-right">
-                  <p className="text-xs font-semibold text-[#00263f] uppercase tracking-tighter" style={{ fontFamily: 'Manrope' }}>Peru Desk</p>
-                  <p className="text-[10px] text-[#72777e]">Maritime Analyst</p>
+                  <p className="text-xs font-semibold text-[#00263f] uppercase tracking-tighter" style={{ fontFamily: 'Manrope' }}>Global Desk</p>
+                  <p className="text-[10px] text-[#72777e]">Commodity Analyst</p>
                 </div>
               </div>
             </header>

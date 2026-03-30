@@ -12,7 +12,7 @@ export async function GET() {
       .from('peru_trade_flows')
       .select('*')
       .order('arrival_time', { ascending: false })
-      .limit(100);
+      .limit(200);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

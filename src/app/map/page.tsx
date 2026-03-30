@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { ConfidenceBadge } from '@/components/ProvenancePanel';
-import { ConfidenceTier, PERU_PORTS } from '@/lib/db/types';
+import { ConfidenceTier, PERU_PORTS, GLOBAL_PORTS } from '@/lib/db/types';
 
 // Country coordinates for route map
 const COUNTRY_COORDS: Record<string, { lat: number; lng: number }> = {
@@ -42,6 +42,7 @@ export default function RouteMapPage() {
   const [routes, setRoutes] = useState<RouteData[]>([]);
   const [loading, setLoading] = useState(true);
   const [commodityFilter, setCommodityFilter] = useState<string>('all');
+  const [regionFilter, setRegionFilter] = useState<string>('all');
 
   useEffect(() => {
     async function loadRoutes() {
@@ -63,6 +64,10 @@ export default function RouteMapPage() {
 
   const filteredRoutes = routes.filter(r => {
     if (commodityFilter !== 'all' && !r.commodities.some(c => c.toLowerCase().includes(commodityFilter.toLowerCase()))) return false;
+    if (regionFilter !== 'all') {
+      const portInfo = GLOBAL_PORTS[r.port];
+      if (portInfo && portInfo.region !== regionFilter) return false;
+    }
     return true;
   });
 
@@ -91,7 +96,7 @@ export default function RouteMapPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-white">Route Map</h1>
-          <p className="text-gray-400 text-sm">Peru ports to destination countries — sized by volume</p>
+          <p className="text-gray-400 text-sm">Global ports to destination countries -- sized by volume</p>
         </div>
         <div className="flex items-center gap-3">
           <select
@@ -103,6 +108,17 @@ export default function RouteMapPage() {
             {allCommodities.map(c => (
               <option key={c} value={c}>{c}</option>
             ))}
+          </select>
+          <select
+            value={regionFilter}
+            onChange={e => setRegionFilter(e.target.value)}
+            className="bg-gray-900 border border-gray-700 rounded-md px-3 py-1.5 text-sm text-gray-300"
+          >
+            <option value="all">All Regions</option>
+            <option value="South America">Americas</option>
+            <option value="Asia-Pacific">Asia-Pacific</option>
+            <option value="Africa">Africa</option>
+            <option value="Oceania">Oceania</option>
           </select>
         </div>
       </div>
@@ -135,7 +151,7 @@ export default function RouteMapPage() {
                 const destCoords = COUNTRY_COORDS[route.destination.toUpperCase()] || COUNTRY_COORDS[route.destination];
                 if (!destCoords) return null;
 
-                const portInfo = route.port === 'PECLL' ? PERU_PORTS.PECLL : PERU_PORTS.PEMRI;
+                const portInfo = GLOBAL_PORTS[route.port] || PERU_PORTS.PECLL;
                 const x1 = projectLng(portInfo.lng);
                 const y1 = projectLat(portInfo.lat);
                 const x2 = projectLng(destCoords.lng);
@@ -160,22 +176,24 @@ export default function RouteMapPage() {
                 );
               })}
 
-              {/* Peru port dots */}
-              {Object.entries(PERU_PORTS).map(([code, info]) => (
+              {/* Global port dots */}
+              {Object.entries(GLOBAL_PORTS)
+                .filter(([, info]) => regionFilter === 'all' || info.region === regionFilter)
+                .map(([code, info]) => (
                 <g key={code}>
                   <circle
                     cx={projectLng(info.lng)}
                     cy={projectLat(info.lat)}
-                    r={6}
-                    fill="#3b82f6"
-                    stroke="#60a5fa"
-                    strokeWidth={2}
+                    r={5}
+                    fill={info.country === 'Peru' ? '#3b82f6' : '#f59e0b'}
+                    stroke={info.country === 'Peru' ? '#60a5fa' : '#fbbf24'}
+                    strokeWidth={1.5}
                   />
                   <text
-                    x={projectLng(info.lng) + 10}
+                    x={projectLng(info.lng) + 8}
                     y={projectLat(info.lat) + 4}
-                    fill="#93c5fd"
-                    fontSize="10"
+                    fill={info.country === 'Peru' ? '#93c5fd' : '#fde68a'}
+                    fontSize="9"
                     fontFamily="monospace"
                   >
                     {info.name}
@@ -231,6 +249,10 @@ export default function RouteMapPage() {
                 <span>Peru port</span>
               </div>
               <div className="flex items-center gap-1">
+                <span className="w-2 h-2 bg-amber-500 rounded-full" />
+                <span>Global port</span>
+              </div>
+              <div className="flex items-center gap-1">
                 <span className="w-2 h-2 bg-emerald-500 rounded-full" />
                 <span>Destination</span>
               </div>
@@ -261,7 +283,7 @@ export default function RouteMapPage() {
                   filteredRoutes.map((route, i) => (
                     <tr key={i} className="border-b border-gray-800/50 hover:bg-gray-800/50">
                       <td className="px-4 py-3 text-blue-400 font-mono">
-                        {route.port === 'PECLL' ? 'Callao' : 'Matarani'}
+                        {GLOBAL_PORTS[route.port]?.name || route.port}
                       </td>
                       <td className="px-4 py-3 text-emerald-400">{route.destination}</td>
                       <td className="px-4 py-3 text-gray-300 font-mono">{route.shipment_count}</td>
