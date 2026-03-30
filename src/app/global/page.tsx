@@ -20,6 +20,15 @@ const COMMODITY_STYLE: Record<string, { color: string; bg: string; icon: string 
   fertilizer:     { color: '#14b8a6', bg: 'rgba(20,184,166,0.15)',icon: 'spa' },
   uranium:        { color: '#facc15', bg: 'rgba(250,204,21,0.15)',icon: 'radio_button_checked' },
   bauxite:        { color: '#dc2626', bg: 'rgba(220,38,38,0.15)', icon: 'terrain' },
+  lng:            { color: '#06b6d4', bg: 'rgba(6,182,212,0.15)',  icon: 'local_gas_station' },
+  lithium_carbonate: { color: '#10b981', bg: 'rgba(16,185,129,0.15)', icon: 'battery_charging_full' },
+  lithium_ore:    { color: '#059669', bg: 'rgba(5,150,105,0.15)',  icon: 'battery_charging_full' },
+  rare_earths:    { color: '#d946ef', bg: 'rgba(217,70,239,0.15)', icon: 'auto_awesome' },
+  crude_oil:      { color: '#1e293b', bg: 'rgba(30,41,59,0.2)',    icon: 'oil_barrel' },
+  alumina:        { color: '#f43f5e', bg: 'rgba(244,63,94,0.15)',  icon: 'factory' },
+  chromium:       { color: '#7c3aed', bg: 'rgba(124,58,237,0.15)', icon: 'shield' },
+  manganese:      { color: '#be185d', bg: 'rgba(190,24,93,0.15)',  icon: 'workspaces' },
+  phosphate:      { color: '#0d9488', bg: 'rgba(13,148,136,0.15)', icon: 'compost' },
 };
 
 interface CommodityData {

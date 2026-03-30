@@ -1,4 +1,5 @@
 export type AlertType = 'entity_entry' | 'dominance_shift' | 'route_expansion' | 'route_confirmed'
+  | 'demand_surge' | 'supply_disruption' | 'new_corridor' | 'critical_mineral_alert'
 export type AlertSeverity = 'medium' | 'high'
 
 export interface TradeAlert {

@@ -9,6 +9,10 @@ const TYPE_LABEL: Record<string, string> = {
   dominance_shift: 'Dominance Shift',
   route_expansion: 'Route Expansion',
   route_confirmed: 'Route Confirmed',
+  demand_surge: 'Demand Surge',
+  supply_disruption: 'Supply Disruption',
+  new_corridor: 'New Corridor',
+  critical_mineral_alert: 'Critical Mineral',
 }
 
 const TYPE_COLOR: Record<string, string> = {
@@ -16,6 +20,10 @@ const TYPE_COLOR: Record<string, string> = {
   dominance_shift: 'text-purple-400 bg-purple-500/15',
   route_expansion: 'text-emerald-400 bg-emerald-500/15',
   route_confirmed: 'text-[#C6A86B] bg-[#C6A86B]/15',
+  demand_surge: 'text-rose-400 bg-rose-500/15',
+  supply_disruption: 'text-orange-400 bg-orange-500/15',
+  new_corridor: 'text-cyan-400 bg-cyan-500/15',
+  critical_mineral_alert: 'text-fuchsia-400 bg-fuchsia-500/15',
 }
 
 function timeAgo(ts: number): string {

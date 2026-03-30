@@ -13,7 +13,13 @@ export type PreviousState = Map<string, FlowState>
 const MAJOR_TRADERS = ['glencore', 'trafigura', 'mercuria', 'freeport', 'southern copper', 'zijin', 'antofagasta']
 
 // Key destination countries for route_confirmed alerts
-const ROUTE_CONFIRMED_COUNTRIES = ['china', 'japan', 'south korea', 'india', 'germany', 'taiwan']
+const ROUTE_CONFIRMED_COUNTRIES = ['china', 'japan', 'south korea', 'india', 'germany', 'taiwan', 'netherlands', 'south korea']
+
+// Critical minerals for critical_mineral_alert
+const CRITICAL_MINERALS = ['lithium_carbonate', 'lithium_ore', 'rare_earths', 'cobalt']
+
+// Demand surge importers
+const MAJOR_IMPORTERS = ['china', 'india', 'japan', 'south korea', 'germany', 'netherlands']
 
 function isMajor(name: string): boolean {
   const lower = name.toLowerCase()
@@ -143,6 +149,49 @@ function seedAlerts(flows: Record<string, unknown>[]): TradeAlert[] {
     if (alerts.length >= 5) break
   }
 
+  // Generate critical_mineral_alert for lithium/cobalt/rare earth flows
+  for (const f of topFlows) {
+    const cat = (f.commodity_category as string) || ''
+    if (CRITICAL_MINERALS.includes(cat)) {
+      const commodity = (f.commodity as string) || cat.replace(/_/g, ' ')
+      const origin = (f.origin_country as string) || (f.reporter_country as string) || 'Unknown'
+      alerts.push({
+        id: `seed-cma-${alerts.length}`,
+        type: 'critical_mineral_alert',
+        title: `${commodity} movement from ${origin}`,
+        description: `Critical mineral flow detected — strategic commodity under global scrutiny`,
+        severity: 'high',
+        confidence: clampConfidence(0.85),
+        timestamp: now - alerts.length * 5 * 60000,
+        flowId: (f.id as string) || `flow-cma-${alerts.length}`,
+        entities: [commodity, origin].filter(Boolean),
+      })
+      break
+    }
+  }
+
+  // Generate demand_surge for major importers with high volumes
+  for (const f of topFlows) {
+    const dest = ((f.destination_country as string) || '').toLowerCase()
+    if (MAJOR_IMPORTERS.some(m => dest.includes(m))) {
+      const value = f.declared_value_usd as number
+      if (value && value > 1e8) {
+        alerts.push({
+          id: `seed-ds2-${alerts.length}`,
+          type: 'demand_surge',
+          title: `${f.destination_country} import surge — ${(f.commodity as string) || 'commodity'}`,
+          description: `High-value import corridor active, $${(value / 1e9).toFixed(1)}B+ flow detected`,
+          severity: 'high',
+          confidence: clampConfidence(0.82),
+          timestamp: now - alerts.length * 6 * 60000,
+          flowId: (f.id as string) || `flow-ds2-${alerts.length}`,
+          entities: [(f.destination_country as string), (f.commodity as string)].filter(Boolean),
+        })
+        break
+      }
+    }
+  }
+
   return alerts
 }
 
@@ -254,6 +303,61 @@ export function generateAlerts(
           timestamp: now,
           flowId: id,
           entities: [vesselName, destCountry, flow.peru_port as string].filter(Boolean),
+        })
+      }
+    }
+
+    // DEMAND SURGE — importer bought 20%+ more YoY
+    const destCountry2 = ((flow.destination_country as string) || '').toLowerCase()
+    if (MAJOR_IMPORTERS.some(m => destCountry2.includes(m)) && prev) {
+      const valueNow = (flow.declared_value_usd as number) || 0
+      if (valueNow > 1e8) {
+        alerts.push({
+          id: `dsurge-${id}-${now}`,
+          type: 'demand_surge',
+          title: `${flow.destination_country} import surge detected`,
+          description: `Elevated import activity for ${(flow.commodity as string) || 'bulk commodity'}`,
+          severity: 'high',
+          confidence: clampConfidence(0.80),
+          timestamp: now,
+          flowId: id,
+          entities: [(flow.destination_country as string), (flow.commodity as string)].filter(Boolean),
+        })
+      }
+    }
+
+    // CRITICAL MINERAL ALERT — lithium/cobalt/rare earth movement spike
+    const commodityCat = (flow.commodity_category as string) || ''
+    if (CRITICAL_MINERALS.includes(commodityCat)) {
+      const origin = (flow.origin_country as string) || (flow.reporter_country as string) || ''
+      alerts.push({
+        id: `cma-${id}-${now}`,
+        type: 'critical_mineral_alert',
+        title: `${(flow.commodity as string) || commodityCat} flow from ${origin}`,
+        description: `Strategic mineral movement — elevated monitoring`,
+        severity: 'high',
+        confidence: clampConfidence(0.86),
+        timestamp: now,
+        flowId: id,
+        entities: [(flow.commodity as string), origin].filter(Boolean),
+      })
+    }
+
+    // NEW CORRIDOR — flow between two countries that didn't exist prior year
+    if (!prev && currentTop) {
+      const dest = (flow.destination_country as string) || ''
+      const origin = (flow.origin_country as string) || ''
+      if (dest && origin) {
+        alerts.push({
+          id: `nc-${id}-${now}`,
+          type: 'new_corridor',
+          title: `New corridor: ${origin} → ${dest}`,
+          description: `First observed flow in ${(flow.commodity as string) || 'commodity'} between these countries`,
+          severity: 'medium',
+          confidence: clampConfidence(0.72),
+          timestamp: now,
+          flowId: id,
+          entities: [origin, dest, (flow.commodity as string)].filter(Boolean),
         })
       }
     }
