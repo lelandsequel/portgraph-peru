@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import GuidedTour from '@/components/GuidedTour';
 
 export const metadata: Metadata = {
   title: 'NAUTILUS — Peru Maritime Intelligence',
@@ -23,10 +24,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
 
             <nav className="flex-1 px-4 space-y-1 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
-              <NavLink href="/" icon="dashboard" label="Dashboard" />
-              <NavLink href="/feed" icon="directions_boat" label="Trade Feed" />
-              <NavLink href="/map" icon="anchor" label="Route Map" />
-              <NavLink href="/signals" icon="notifications_active" label="Signals" />
+              <NavLink href="/" icon="dashboard" label="Dashboard" id="nav-dashboard" />
+              <NavLink href="/feed" icon="directions_boat" label="Trade Feed" id="nav-feed" />
+              <NavLink href="/map" icon="anchor" label="Route Map" id="nav-map" />
+              <NavLink href="/signals" icon="notifications_active" label="Signals" id="nav-signals" />
 
               <div className="pt-8 pb-2">
                 <p className="px-4 text-[10px] uppercase tracking-widest text-[#72777e] font-bold" style={{ fontFamily: 'Manrope' }}>Intelligence</p>
@@ -77,6 +78,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </div>
 
+        <GuidedTour />
+
         <style>{`
           .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
@@ -89,10 +92,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   );
 }
 
-function NavLink({ href, icon, label }: { href: string; icon: string; label: string }) {
+function NavLink({ href, icon, label, id }: { href: string; icon: string; label: string; id?: string }) {
   return (
     <a
       href={href}
+      id={id}
       className="flex items-center gap-3 px-4 py-3 rounded-lg text-[#42474e] hover:text-[#00263f] hover:bg-[#e5e9eb] transition-colors duration-200 group"
       style={{ fontFamily: 'Manrope' }}
     >
