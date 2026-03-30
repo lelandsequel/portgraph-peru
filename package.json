@@ -14,7 +14,8 @@
     "enrich:companies": "npx tsx scripts/enrich-companies.ts",
     "enrich:antamina": "npx tsx scripts/antamina-insert.ts",
     "enrich:teck": "npx tsx scripts/enrich-teck-glencore.ts",
-    "enrich:all": "npm run enrich:companies && npm run enrich:antamina && npm run enrich:teck"
+    "enrich:all": "npm run enrich:companies && npm run enrich:antamina && npm run enrich:teck && npm run enrich:scco",
+    "enrich:scco": "npx tsx scripts/enrich-scco-quellaveco-bvn.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.100.1",
