@@ -13,11 +13,11 @@ const QUERY_TYPES: { value: QueryType; label: string; placeholder: string }[] = 
 ];
 
 const EXAMPLE_QUERIES = [
-  { query: 'copper concentrate', type: 'commodity' as QueryType, label: 'Copper concentrate exports' },
-  { query: 'China', type: 'country' as QueryType, label: 'China trade flows' },
-  { query: 'zinc', type: 'commodity' as QueryType, label: 'Zinc ore shipments' },
-  { query: 'Japan', type: 'country' as QueryType, label: 'Japan trade flows' },
-  { query: 'refined copper', type: 'commodity' as QueryType, label: 'Refined copper exports' },
+  { query: 'copper concentrate', type: 'commodity' as QueryType, label: 'Copper concentrate' },
+  { query: 'China', type: 'country' as QueryType, label: 'China flows' },
+  { query: 'zinc', type: 'commodity' as QueryType, label: 'Zinc ore' },
+  { query: 'Japan', type: 'country' as QueryType, label: 'Japan flows' },
+  { query: 'refined copper', type: 'commodity' as QueryType, label: 'Refined copper' },
 ];
 
 export default function HomePage() {
@@ -31,18 +31,13 @@ export default function HomePage() {
     if (!q.trim()) return;
     setLoading(true);
     setError(null);
-
     try {
       const res = await fetch('/api/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: q, type: t }),
       });
-
-      if (!res.ok) {
-        throw new Error(`Query failed: ${res.status}`);
-      }
-
+      if (!res.ok) throw new Error(`Query failed: ${res.status}`);
       const data = await res.json();
       setProfile(data);
     } catch (err) {
@@ -58,128 +53,101 @@ export default function HomePage() {
     executeQuery(query, queryType);
   };
 
-  const handleExample = (q: string, t: QueryType) => {
-    setQuery(q);
-    setQueryType(t);
-    executeQuery(q, t);
-  };
+  const currentType = QUERY_TYPES.find(t => t.value === queryType)!;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Hero */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">
-          Trade Intelligence Query
+    <div className="p-10 max-w-4xl">
+      {/* Header */}
+      <div className="mb-10">
+        <h1 className="text-3xl font-thin tracking-wide text-[#00263f] mb-2" style={{ fontFamily: 'Sora, Manrope' }}>
+          Trade Intelligence
         </h1>
-        <p className="text-gray-400 text-sm max-w-2xl mx-auto">
+        <p className="text-[#72777e] text-sm leading-relaxed max-w-xl">
           Enter a vessel, company, commodity, country, or port.
           Returns a confidence-scored intelligence profile with observed, enriched, and inferred data.
         </p>
       </div>
 
       {/* Search */}
-      <form onSubmit={handleSubmit} className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          {QUERY_TYPES.map(qt => (
+      <form onSubmit={handleSubmit} className="mb-8">
+        <div className="bg-white rounded-2xl shadow-[0_2px_12px_rgba(24,28,30,0.08)] p-6">
+          {/* Type tabs */}
+          <div className="flex gap-2 mb-5">
+            {QUERY_TYPES.map(t => (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => setQueryType(t.value)}
+                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  queryType === t.value
+                    ? 'bg-[#00263f] text-white'
+                    : 'bg-[#f1f4f6] text-[#42474e] hover:bg-[#e5e9eb]'
+                }`}
+                style={{ fontFamily: 'Manrope' }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder={currentType.placeholder}
+              className="flex-1 bg-[#f1f4f6] border-none rounded-full px-5 py-3 text-sm text-[#181c1e] placeholder:text-[#72777e]/60 focus:outline-none focus:ring-2 focus:ring-[#006a62]/20"
+            />
             <button
-              key={qt.value}
-              type="button"
-              onClick={() => setQueryType(qt.value)}
-              className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                queryType === qt.value
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200'
-              }`}
+              type="submit"
+              disabled={loading || !query.trim()}
+              className="px-8 py-3 bg-[#00263f] text-white rounded-full text-sm font-medium hover:bg-[#0b3c5d] disabled:opacity-40 transition-colors"
+              style={{ fontFamily: 'Manrope' }}
             >
-              {qt.label}
+              {loading ? 'Querying...' : 'Query'}
             </button>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder={QUERY_TYPES.find(qt => qt.value === queryType)?.placeholder}
-            className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono text-sm"
-          />
-          <button
-            type="submit"
-            disabled={loading || !query.trim()}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Querying...
-              </span>
-            ) : 'Query'}
-          </button>
+          </div>
         </div>
       </form>
 
       {/* Example queries */}
       {!profile && !loading && (
         <div className="mb-8">
-          <p className="text-xs text-gray-500 mb-2">Example queries:</p>
+          <p className="text-xs text-[#72777e] uppercase tracking-widest mb-3 font-medium" style={{ fontFamily: 'Manrope' }}>
+            Try these
+          </p>
           <div className="flex flex-wrap gap-2">
-            {EXAMPLE_QUERIES.map((eq, i) => (
+            {EXAMPLE_QUERIES.map(ex => (
               <button
-                key={i}
-                onClick={() => handleExample(eq.query, eq.type)}
-                className="px-3 py-1.5 text-xs bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200 rounded-md transition-colors border border-gray-700"
+                key={ex.query}
+                onClick={() => {
+                  setQuery(ex.query);
+                  setQueryType(ex.type);
+                  executeQuery(ex.query, ex.type);
+                }}
+                className="px-4 py-1.5 bg-white rounded-full text-xs text-[#42474e] hover:bg-[#e5e9eb] transition-colors shadow-sm"
+                style={{ fontFamily: 'Manrope' }}
               >
-                {eq.label}
+                {ex.label}
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Error */}
       {error && (
-        <div className="mb-6 p-4 bg-red-900/30 border border-red-800 rounded-lg text-red-400 text-sm">
+        <div className="bg-[#ffdad6] text-[#ba1a1a] rounded-lg px-5 py-4 text-sm mb-6">
           {error}
         </div>
       )}
 
-      {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-16">
-          <div className="text-center">
-            <svg className="animate-spin h-8 w-8 text-blue-500 mx-auto mb-3" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            <p className="text-gray-400 text-sm">Running COSMIC pipeline query...</p>
-            <p className="text-gray-600 text-xs mt-1">METEOR + COMET + AURORA</p>
-          </div>
+          <div className="w-8 h-8 border-2 border-[#006a62]/30 border-t-[#006a62] rounded-full animate-spin" />
         </div>
       )}
 
-      {/* Results */}
       {profile && !loading && <IntelligenceProfile profile={profile} />}
-
-      {/* Footer info */}
-      <div className="mt-12 border-t border-gray-800 pt-6">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-gray-600">
-          <div>
-            <p className="text-gray-400 font-medium mb-1">Data Sources</p>
-            <p>OEC BACI (annual bilateral trade flows, 2019-2022)</p>
-          </div>
-          <div>
-            <p className="text-gray-400 font-medium mb-1">Coverage</p>
-            <p>Peru mining exports: copper, zinc, lead | Country-level, annual</p>
-          </div>
-          <div>
-            <p className="text-gray-400 font-medium mb-1">Pipeline</p>
-            <p>METEOR entity resolution + COMET chains + AURORA trust</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -11,9 +11,9 @@ const TYPE_LABEL: Record<string, string> = {
 }
 
 const TYPE_COLOR: Record<string, string> = {
-  entity_entry: 'text-blue-400 bg-blue-900/40 border-blue-800',
-  dominance_shift: 'text-purple-400 bg-purple-900/40 border-purple-800',
-  route_expansion: 'text-emerald-400 bg-emerald-900/40 border-emerald-800',
+  entity_entry: 'text-[#00263f] bg-[#cee5ff]/60',
+  dominance_shift: 'text-[#5c006a] bg-[#f3d0ff]/60',
+  route_expansion: 'text-[#006a62] bg-[#70f8e8]/30',
 }
 
 function timeAgo(ts: number): string {
@@ -27,38 +27,36 @@ function AlertCard({ alert }: { alert: TradeAlert }) {
   const isHigh = alert.severity === 'high'
   return (
     <div
-      className={`rounded-sm border p-4 transition-all ${
-        isHigh
-          ? 'border-red-800 bg-red-950/20'
-          : 'border-gray-800 bg-gray-900/40'
+      className={`rounded-lg p-5 transition-all shadow-[0_1px_4px_rgba(24,28,30,0.07)] ${
+        isHigh ? 'bg-[#fff5f5] border-l-4 border-l-[#ba1a1a]' : 'bg-white'
       }`}
     >
-      <div className="flex items-start justify-between gap-3 mb-2">
+      <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-sm border ${TYPE_COLOR[alert.type] ?? 'text-gray-400 bg-gray-800 border-gray-700'}`}>
+          <span className={`text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full ${TYPE_COLOR[alert.type] ?? 'text-[#42474e] bg-[#f1f4f6]'}`}>
             {TYPE_LABEL[alert.type]}
           </span>
-          <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-sm border ${
+          <span className={`text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full ${
             isHigh
-              ? 'bg-red-900/50 text-red-400 border-red-800'
-              : 'bg-amber-900/50 text-amber-400 border-amber-800'
-          }`}>
+              ? 'bg-[#ffdad6] text-[#ba1a1a]'
+              : 'bg-[#fff9e6] text-[#7a5800]'
+          }`} style={{ fontFamily: 'Manrope' }}>
             {alert.severity.toUpperCase()}
           </span>
         </div>
         <div className="text-right shrink-0">
-          <div className="text-xs font-mono text-gray-400">{(alert.confidence * 100).toFixed(0)}%</div>
-          <div className="text-[10px] text-gray-600">{timeAgo(alert.timestamp)}</div>
+          <div className="text-xs text-[#42474e]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{(alert.confidence * 100).toFixed(0)}% conf</div>
+          <div className="text-[10px] text-[#72777e]">{timeAgo(alert.timestamp)}</div>
         </div>
       </div>
 
-      <div className="text-sm font-bold text-white mb-1">{alert.title}</div>
-      <div className="text-xs text-gray-400 mb-3">{alert.description}</div>
+      <div className="text-sm font-semibold text-[#00263f] mb-1" style={{ fontFamily: 'Manrope' }}>{alert.title}</div>
+      <div className="text-xs text-[#42474e] mb-3 leading-relaxed">{alert.description}</div>
 
       {alert.entities.length > 0 && (
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1.5">
           {alert.entities.slice(0, 3).map((e, i) => (
-            <span key={i} className="text-[10px] px-2 py-0.5 rounded-sm bg-gray-800 text-gray-300 border border-gray-700">
+            <span key={i} className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#f1f4f6] text-[#42474e]" style={{ fontFamily: 'Manrope' }}>
               {e}
             </span>
           ))}
@@ -109,15 +107,15 @@ export default function SignalsPage() {
   }, [])
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
+    <div className="p-10 max-w-4xl">
+      <div className="mb-10">
         <div className="flex items-center justify-between mb-1">
-          <h1 className="text-2xl font-bold text-white">Key Signals</h1>
+          <h1 className="text-3xl font-thin tracking-wide text-[#00263f]" style={{ fontFamily: 'Sora, Manrope' }}>Key Signals</h1>
           {lastRefresh && (
-            <span className="text-xs text-gray-600 font-mono">Updated {lastRefresh}</span>
+            <span className="text-xs text-[#72777e]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>Updated {lastRefresh}</span>
           )}
         </div>
-        <p className="text-gray-400 text-sm">
+        <p className="text-[#72777e] text-sm mt-1">
           Detected shifts in trade relationships and control
         </p>
       </div>
@@ -125,12 +123,12 @@ export default function SignalsPage() {
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-28 rounded-sm bg-gray-900/40 border border-gray-800 animate-pulse" />
+            <div key={i} className="h-28 rounded-lg bg-white animate-pulse shadow-sm" />
           ))}
         </div>
       ) : alerts.length === 0 ? (
-        <div className="text-center py-20 text-gray-600">
-          <div className="text-4xl mb-4">◎</div>
+        <div className="text-center py-20 text-[#72777e]">
+          <div className="text-4xl mb-4 opacity-30">◎</div>
           <div className="text-sm">No signals detected. Monitoring trade flows.</div>
         </div>
       ) : (
