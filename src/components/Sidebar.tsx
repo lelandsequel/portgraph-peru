@@ -65,6 +65,7 @@ export default function Sidebar() {
 
         <SectionLabel label="Monitor" />
         <NavLink href="/terminal" icon="terminal" label="Terminal" id="nav-terminal" active={isActive('/terminal')} onClick={() => setOpen(false)} />
+        <NavLink href="/lng" icon="local_gas_station" label="LNG" id="nav-lng" active={isActive('/lng')} onClick={() => setOpen(false)} />
         <NavLink href="/feed" icon="directions_boat" label="Vessels" id="nav-feed" active={isActive('/feed')} onClick={() => setOpen(false)} />
         <NavLink href="/global" icon="public" label="Global" id="nav-global" active={isActive('/global')} onClick={() => setOpen(false)} />
 
