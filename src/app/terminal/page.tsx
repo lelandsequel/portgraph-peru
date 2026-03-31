@@ -1,152 +1,234 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { TradeIntelligenceProfile, QueryType } from '@/lib/db/types';
-import IntelligenceProfile from '@/components/IntelligenceProfile';
+import { useState, useEffect, useRef } from 'react';
+import { generateCosmicSignals, CosmicAlert, PreviousState } from '@/lib/signals/cosmicSignalEngine';
 
-const QUERY_TYPES: { value: QueryType; label: string; placeholder: string }[] = [
-  { value: 'vessel', label: 'Vessel', placeholder: 'Enter vessel name or IMO number...' },
-  { value: 'company', label: 'Company', placeholder: 'Enter exporter or importer name...' },
-  { value: 'commodity', label: 'Commodity', placeholder: 'copper, zinc, lead, or HS code...' },
-  { value: 'country', label: 'Country', placeholder: 'Enter destination or origin country...' },
-  { value: 'port', label: 'Port', placeholder: 'Callao, Matarani, PECLL, PEMRI...' },
-];
+const IMPACT_COLOR: Record<string, string> = {
+  routine: '#22c55e',
+  notable: '#eab308',
+  critical: '#ef4444',
+};
 
-const EXAMPLE_QUERIES = [
-  { query: 'copper concentrate', type: 'commodity' as QueryType, label: 'Copper concentrate' },
-  { query: 'China', type: 'country' as QueryType, label: 'China flows' },
-  { query: 'zinc', type: 'commodity' as QueryType, label: 'Zinc ore' },
-  { query: 'Japan', type: 'country' as QueryType, label: 'Japan flows' },
-  { query: 'refined copper', type: 'commodity' as QueryType, label: 'Refined copper' },
-];
+const ROUTE_BADGE: Record<string, { color: string; bg: string }> = {
+  confirmed: { color: '#22c55e', bg: 'rgba(34,197,94,0.15)' },
+  partial: { color: '#eab308', bg: 'rgba(234,179,8,0.15)' },
+  broken: { color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
+};
+
+function ConfidenceBar({ value }: { value: number }) {
+  const pct = Math.round(value * 100);
+  const color = pct >= 80 ? '#22c55e' : pct >= 55 ? '#eab308' : '#ef4444';
+  return (
+    <div className="w-full h-[3px] bg-[#1a2030] mt-1">
+      <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+    </div>
+  );
+}
+
+function FreshnessIndicator({ score }: { score: number }) {
+  const pct = Math.round(score * 100);
+  const color = pct >= 80 ? '#22c55e' : pct >= 50 ? '#eab308' : '#ef4444';
+  return (
+    <span className="text-[9px] font-mono" style={{ color }}>
+      F:{pct}%
+    </span>
+  );
+}
 
 export default function TerminalPage() {
-  const [query, setQuery] = useState('');
-  const [queryType, setQueryType] = useState<QueryType>('commodity');
-  const [profile, setProfile] = useState<TradeIntelligenceProfile | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [alerts, setAlerts] = useState<CosmicAlert[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const prevStateRef = useRef<PreviousState>(new Map());
 
-  const executeQuery = useCallback(async (q: string, t: QueryType) => {
-    if (!q.trim()) return;
-    setLoading(true);
-    setError(null);
+  const refresh = async (showLoading = false) => {
+    if (showLoading) setLoading(true);
     try {
-      const res = await fetch('/api/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: q, type: t }),
-      });
-      if (!res.ok) throw new Error(`Query failed: ${res.status}`);
+      const res = await fetch('/api/feed');
+      if (!res.ok) throw new Error('Feed failed');
       const data = await res.json();
-      setProfile(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Query failed');
-      setProfile(null);
+      const flows = data.flows || [];
+      const { alerts: newAlerts, nextState } = generateCosmicSignals(flows, prevStateRef.current);
+      prevStateRef.current = nextState;
+      if (newAlerts.length > 0) {
+        setAlerts(prev => {
+          const combined = [...newAlerts, ...prev];
+          const seen = new Set<string>();
+          return combined.filter(a => {
+            if (seen.has(a.id)) return false;
+            seen.add(a.id);
+            return true;
+          }).sort((a, b) => b.impact_score - a.impact_score).slice(0, 20);
+        });
+      }
+      setLastRefresh(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    } catch (e) {
+      console.error('Terminal refresh failed', e);
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    executeQuery(query, queryType);
   };
 
-  const currentType = QUERY_TYPES.find(t => t.value === queryType)!;
+  useEffect(() => {
+    refresh(true);
+    const interval = setInterval(() => refresh(false), 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    <div className="p-4 sm:p-8 max-w-4xl">
+    <div className="h-[calc(100vh-6rem)] flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-thin tracking-wide text-[#C6A86B] mb-1" style={{ fontFamily: 'Sora, Manrope' }}>
-          Terminal
-        </h1>
-        <p className="text-[#6b7a8d] text-sm">
-          Query intelligence profiles — vessel, company, commodity, country, or port.
-        </p>
+      <div className="flex items-center justify-between px-3 py-2 border-b border-[#1e2535] shrink-0">
+        <div className="flex items-center gap-3">
+          <h1 className="text-sm font-thin tracking-wide text-[#C6A86B]" style={{ fontFamily: 'Sora, Manrope' }}>
+            COSMIC Terminal
+          </h1>
+          <span className="text-[9px] text-[#6b7a8d] bg-[#121722] px-2 py-0.5 border border-[#1e2535] font-mono">
+            {alerts.length} signals
+          </span>
+          <span className="text-[9px] px-2 py-0.5 bg-red-900/20 text-red-400 border border-red-900/30 animate-pulse">LIVE</span>
+        </div>
+        <div className="flex items-center gap-3">
+          {lastRefresh && (
+            <span className="text-[9px] text-[#6b7a8d] font-mono">UPD {lastRefresh}</span>
+          )}
+          <span className="text-[9px] text-[#6b7a8d] font-mono">30s refresh</span>
+        </div>
       </div>
 
-      {/* Search */}
-      <form onSubmit={handleSubmit} className="mb-8">
-        <div className="bg-[#121722] border border-[#1e2535] p-5">
-          {/* Type tabs */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {QUERY_TYPES.map(t => (
-              <button
-                key={t.value}
-                type="button"
-                onClick={() => setQueryType(t.value)}
-                className={`px-4 py-1.5 text-xs font-medium transition-all ${
-                  queryType === t.value
-                    ? 'bg-[#C6A86B] text-[#0B0E13]'
-                    : 'bg-[#1a2030] text-[#8a9bb0] hover:bg-[#1e2535] hover:text-[#e0e6ed]'
-                }`}
-                style={{ fontFamily: 'Manrope' }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+      {/* Column headers */}
+      <div className="flex items-center gap-0 px-2 py-1.5 border-b border-[#1e2535] bg-[#0d1117] text-[8px] text-[#6b7a8d] uppercase tracking-widest shrink-0 font-mono">
+        <span className="w-10 text-center">IMP</span>
+        <span className="w-12 text-center">CONF</span>
+        <span className="flex-1 pl-2">EVENT</span>
+        <span className="w-20 text-center hidden sm:block">ROUTE</span>
+        <span className="w-24 text-right hidden sm:block">COMMODITY</span>
+        <span className="w-16 text-right hidden md:block">FRESH</span>
+        <span className="w-20 text-right hidden lg:block">ACTION</span>
+      </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="text"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder={currentType.placeholder}
-              className="flex-1 bg-[#0B0E13] border border-[#1e2535] px-4 py-2.5 text-sm text-[#e0e6ed] placeholder:text-[#6b7a8d]/60 focus:outline-none focus:border-[#4C6A92] min-h-[44px]"
-            />
-            <button
-              type="submit"
-              disabled={loading || !query.trim()}
-              className="px-8 py-2.5 bg-[#4C6A92] text-white text-sm font-medium hover:bg-[#5a7ba6] disabled:opacity-40 transition-colors min-h-[44px]"
-              style={{ fontFamily: 'Manrope' }}
-            >
-              {loading ? 'Querying...' : 'Query'}
-            </button>
-          </div>
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-6 h-6 border-2 border-[#4C6A92]/30 border-t-[#4C6A92] rounded-full animate-spin" />
         </div>
-      </form>
+      ) : alerts.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center text-[#6b7a8d] text-sm font-mono">
+          MONITORING... NO SIGNALS
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+          {alerts.map(alert => {
+            const impColor = IMPACT_COLOR[alert.impact_category] || '#6b7a8d';
+            const routeBadge = ROUTE_BADGE[alert.route_status] || ROUTE_BADGE.partial;
+            const isExpanded = expandedId === alert.id;
 
-      {/* Example queries */}
-      {!profile && !loading && (
-        <div className="mb-8">
-          <p className="text-[9px] text-[#6b7a8d] uppercase tracking-[0.15em] mb-3 font-medium" style={{ fontFamily: 'Manrope' }}>
-            Try these
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {EXAMPLE_QUERIES.map(ex => (
-              <button
-                key={ex.query}
-                onClick={() => {
-                  setQuery(ex.query);
-                  setQueryType(ex.type);
-                  executeQuery(ex.query, ex.type);
-                }}
-                className="px-4 py-1.5 bg-[#121722] border border-[#1e2535] text-xs text-[#8a9bb0] hover:bg-[#1a2030] hover:text-[#e0e6ed] transition-colors"
-                style={{ fontFamily: 'Manrope' }}
-              >
-                {ex.label}
-              </button>
-            ))}
-          </div>
+            return (
+              <div key={alert.id}>
+                {/* Main row */}
+                <div
+                  className="flex items-center gap-0 px-2 py-1.5 border-b border-[#1e2535]/40 hover:bg-[#121722] cursor-pointer transition-colors"
+                  onClick={() => setExpandedId(isExpanded ? null : alert.id)}
+                >
+                  {/* Impact score */}
+                  <span
+                    className="w-10 text-center text-xs font-bold font-mono"
+                    style={{ color: impColor }}
+                  >
+                    {alert.impact_score}
+                  </span>
+
+                  {/* Confidence */}
+                  <span className="w-12 text-center text-[10px] font-mono text-[#8a9bb0]">
+                    {Math.round(alert.confidence * 100)}%
+                  </span>
+
+                  {/* Event title */}
+                  <span className="flex-1 text-xs text-[#e0e6ed] truncate pl-2 font-medium" style={{ fontFamily: 'Manrope' }}>
+                    {alert.title}
+                  </span>
+
+                  {/* Route status */}
+                  <span
+                    className="w-20 text-center text-[9px] font-bold uppercase tracking-wider hidden sm:block"
+                    style={{ color: routeBadge.color }}
+                  >
+                    {alert.route_status}
+                  </span>
+
+                  {/* Commodity */}
+                  <span className="w-24 text-right text-[10px] text-[#8a9bb0] font-mono truncate hidden sm:block">
+                    {alert.commodity.toUpperCase()}
+                  </span>
+
+                  {/* Freshness */}
+                  <span className="w-16 text-right hidden md:block">
+                    <FreshnessIndicator score={alert.freshness_score} />
+                  </span>
+
+                  {/* Action bias */}
+                  <span className="w-20 text-right text-[9px] font-mono hidden lg:block" style={{
+                    color: alert.action_bias.startsWith('ALERT') ? '#ef4444'
+                      : alert.action_bias.startsWith('INVESTIGATE') ? '#eab308'
+                      : alert.action_bias.startsWith('MONITOR') ? '#3b82f6'
+                      : '#6b7a8d'
+                  }}>
+                    {alert.action_bias.split(' ')[0]}
+                  </span>
+                </div>
+
+                {/* Confidence bar */}
+                <div className="px-2">
+                  <ConfidenceBar value={alert.confidence} />
+                </div>
+
+                {/* Expanded detail */}
+                {isExpanded && (
+                  <div className="px-3 py-3 bg-[#0d1117] border-b border-[#1e2535] text-[11px] space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-[9px] text-[#4C6A92] uppercase tracking-wider">Why it matters</span>
+                        <p className="text-[#8a9bb0] mt-0.5">{alert.why_it_matters}</p>
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-[#4C6A92] uppercase tracking-wider">Economic implication</span>
+                        <p className="text-[#8a9bb0] mt-0.5">{alert.economic_implication}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-[#4C6A92] uppercase tracking-wider">Price context</span>
+                      <p className="text-[#C6A86B] font-mono mt-0.5">{alert.price_context}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      <div>
+                        <span className="text-[9px] text-[#4C6A92] uppercase tracking-wider">Regions</span>
+                        <p className="text-[#8a9bb0] mt-0.5">{alert.affected_regions.join(', ')}</p>
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-[#4C6A92] uppercase tracking-wider">Companies</span>
+                        <p className="text-[#8a9bb0] mt-0.5">{alert.affected_companies.join(', ')}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {alert.entities.map((e, i) => (
+                        <span key={i} className="text-[9px] px-1.5 py-0.5 bg-[#1a2030] text-[#6b7a8d] border border-[#1e2535]">
+                          {e}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex gap-4 text-[9px] text-[#6b7a8d] font-mono pt-1 border-t border-[#1e2535]/50">
+                      <span>METEOR: {alert.cosmic.meteor.composite_confidence.toFixed(2)}</span>
+                      <span>COMET: {alert.cosmic.comet.continuity_score.toFixed(2)}</span>
+                      <span>NEBULA: {alert.cosmic.nebula.confidence.toFixed(2)} ({alert.cosmic.nebula.uncertainty_band})</span>
+                      <span>QUASAR: {alert.cosmic.quasar.impact_score} (p{alert.cosmic.quasar.percentile_rank})</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
-
-      {error && (
-        <div className="bg-red-900/30 border border-red-800 text-red-400 px-5 py-4 text-sm mb-6">
-          {error}
-        </div>
-      )}
-
-      {loading && (
-        <div className="flex items-center justify-center py-16">
-          <div className="w-8 h-8 border-2 border-[#4C6A92]/30 border-t-[#4C6A92] rounded-full animate-spin" />
-        </div>
-      )}
-
-      {profile && !loading && <IntelligenceProfile profile={profile} />}
     </div>
   );
 }

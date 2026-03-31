@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { generateCosmicSignals, CosmicAlert, PreviousState } from '@/lib/signals/cosmicSignalEngine';
+import { getAllPrices, CommodityPrice } from '@/lib/pricing/prices';
 
 const COMMODITY_STYLE: Record<string, { color: string; bg: string; icon: string }> = {
   copper_ore:     { color: '#f59e0b', bg: 'rgba(245,158,11,0.15)', icon: 'bolt' },
@@ -29,6 +31,12 @@ const COMMODITY_STYLE: Record<string, { color: string; bg: string; icon: string 
   chromium:       { color: '#7c3aed', bg: 'rgba(124,58,237,0.15)', icon: 'shield' },
   manganese:      { color: '#be185d', bg: 'rgba(190,24,93,0.15)',  icon: 'workspaces' },
   phosphate:      { color: '#0d9488', bg: 'rgba(13,148,136,0.15)', icon: 'compost' },
+};
+
+const IMPACT_COLOR: Record<string, string> = {
+  routine: '#22c55e',
+  notable: '#eab308',
+  critical: '#ef4444',
 };
 
 interface CommodityData {
@@ -73,24 +81,67 @@ function TrendArrow({ recent, total }: { recent: number; total: number }) {
   return <span className="text-red-400 font-semibold">&#9660;</span>;
 }
 
+function ConfidenceBar({ value }: { value: number }) {
+  const pct = Math.round(value * 100);
+  const color = pct >= 80 ? '#22c55e' : pct >= 55 ? '#eab308' : '#ef4444';
+  return (
+    <div className="w-full h-[2px] bg-[#1a2030] mt-0.5">
+      <div className="h-full" style={{ width: `${pct}%`, backgroundColor: color }} />
+    </div>
+  );
+}
+
+function CriticalTicker({ alerts }: { alerts: CosmicAlert[] }) {
+  const critical = alerts.filter(a => a.impact_category === 'critical');
+  if (critical.length === 0) return null;
+
+  return (
+    <div className="bg-red-900/10 border-b border-red-900/30 overflow-hidden h-6 flex items-center shrink-0">
+      <span className="text-[9px] text-red-400 px-2 shrink-0 font-bold uppercase tracking-wider bg-red-900/20">CRITICAL</span>
+      <div className="overflow-hidden flex-1">
+        <div className="flex gap-8 animate-scroll whitespace-nowrap">
+          {critical.map(a => (
+            <span key={a.id} className="text-[10px] text-red-300 font-mono">
+              [{a.impact_score}] {a.title} — {a.commodity.toUpperCase()}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function GlobalPage() {
   const [commodities, setCommodities] = useState<CommodityData[]>([]);
   const [corridors, setCorridors] = useState<CorridorData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
   const [lastUpdated] = useState(() => new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
+  const [signals, setSignals] = useState<CosmicAlert[]>([]);
+  const [prices] = useState<CommodityPrice[]>(() => getAllPrices());
+  const prevStateRef = useRef<PreviousState>(new Map());
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/global');
-        if (res.ok) {
-          const data = await res.json();
+        const [globalRes, feedRes] = await Promise.all([
+          fetch('/api/global'),
+          fetch('/api/feed'),
+        ]);
+        if (globalRes.ok) {
+          const data = await globalRes.json();
           setCommodities(data.commodities || []);
           setCorridors(data.corridors || []);
           if (data.commodities?.length > 0) {
             setSelected(data.commodities[0].category);
           }
+        }
+        if (feedRes.ok) {
+          const feedData = await feedRes.json();
+          const flows = feedData.flows || [];
+          const { alerts, nextState } = generateCosmicSignals(flows, prevStateRef.current);
+          prevStateRef.current = nextState;
+          setSignals(alerts);
         }
       } catch (err) {
         console.error('Failed to load global data:', err);
@@ -102,37 +153,40 @@ export default function GlobalPage() {
   }, []);
 
   const selectedCommodity = commodities.find(c => c.category === selected);
-
-  // Build per-commodity corridor data
   const selectedCorridors = corridors.filter(c =>
     c.commodities.some(cm => cm.toLowerCase().includes((selectedCommodity?.commodity || '').toLowerCase().split(' ')[0]))
   );
-
-  // Simulated alerts for selected commodity
-  const alerts = selectedCommodity ? [
-    { text: `${selectedCommodity.recent_count} shipments in last 30 days`, type: 'info' as const },
-    { text: `Top destination: ${selectedCommodity.top_destination}`, type: 'info' as const },
-    ...(selectedCommodity.recent_count > selectedCommodity.shipment_count * 0.3
-      ? [{ text: 'Above-average activity detected', type: 'warn' as const }]
-      : []),
-    { text: `Primary exporter: ${selectedCommodity.top_exporter}`, type: 'info' as const },
-  ] : [];
+  const topSignals = signals.slice(0, 5);
 
   return (
     <div className="h-[calc(100vh-6rem)] flex flex-col">
+      {/* Critical events ticker */}
+      <CriticalTicker alerts={signals} />
+
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-[#1e2535] shrink-0">
+      <div className="flex items-center justify-between px-4 sm:px-6 py-2 border-b border-[#1e2535] shrink-0">
         <div className="flex items-center gap-3">
           <h1 className="text-base font-thin tracking-wide text-[#C6A86B]" style={{ fontFamily: 'Sora, Manrope' }}>
             Global Command Center
           </h1>
-          <span className="text-[9px] text-[#6b7a8d] bg-[#121722] px-2 py-0.5 border border-[#1e2535]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+          <span className="text-[9px] text-[#6b7a8d] bg-[#121722] px-2 py-0.5 border border-[#1e2535] font-mono">
             {commodities.length} commodities
           </span>
         </div>
-        <span className="text-[10px] text-[#6b7a8d]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>
-          Updated {lastUpdated}
-        </span>
+        <div className="flex items-center gap-3">
+          {/* Freshness indicators */}
+          <div className="hidden sm:flex items-center gap-2">
+            {['Comtrade', 'PortWatch', 'VesselFinder'].map(src => (
+              <span key={src} className="text-[8px] text-[#6b7a8d] font-mono flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                {src}
+              </span>
+            ))}
+          </div>
+          <span className="text-[10px] text-[#6b7a8d] font-mono">
+            {lastUpdated}
+          </span>
+        </div>
       </div>
 
       {loading ? (
@@ -165,7 +219,7 @@ export default function GlobalPage() {
                       </p>
                       <p className="text-[9px] text-[#6b7a8d]">{formatValue(c.total_value_usd)}</p>
                     </div>
-                    <span className="text-[10px] text-[#6b7a8d] bg-[#1a2030] px-1.5 py-0.5 shrink-0" style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+                    <span className="text-[10px] text-[#6b7a8d] bg-[#1a2030] px-1.5 py-0.5 shrink-0 font-mono">
                       {c.shipment_count}
                     </span>
                   </button>
@@ -190,61 +244,89 @@ export default function GlobalPage() {
           </div>
 
           {/* CENTER — Commodity deep-dive */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-w-0">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 min-w-0">
             {selectedCommodity ? (
               <>
                 {/* Header */}
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 flex items-center justify-center" style={{ backgroundColor: (COMMODITY_STYLE[selectedCommodity.category] || { bg: '#1a2030' }).bg }}>
-                    <span className="material-symbols-outlined" style={{ color: (COMMODITY_STYLE[selectedCommodity.category] || { color: '#6b7a8d' }).color, fontSize: '22px' }}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-9 h-9 flex items-center justify-center" style={{ backgroundColor: (COMMODITY_STYLE[selectedCommodity.category] || { bg: '#1a2030' }).bg }}>
+                    <span className="material-symbols-outlined" style={{ color: (COMMODITY_STYLE[selectedCommodity.category] || { color: '#6b7a8d' }).color, fontSize: '20px' }}>
                       {(COMMODITY_STYLE[selectedCommodity.category] || { icon: 'category' }).icon}
                     </span>
                   </div>
                   <div>
-                    <h2 className="text-lg font-medium text-[#e0e6ed]" style={{ fontFamily: 'Manrope' }}>{selectedCommodity.commodity}</h2>
-                    <p className="text-[10px] text-[#6b7a8d] uppercase tracking-wider">{selectedCommodity.category.replace(/_/g, ' ')}</p>
+                    <h2 className="text-base font-medium text-[#e0e6ed]" style={{ fontFamily: 'Manrope' }}>{selectedCommodity.commodity}</h2>
+                    <p className="text-[9px] text-[#6b7a8d] uppercase tracking-wider">{selectedCommodity.category.replace(/_/g, ' ')}</p>
                   </div>
                 </div>
 
                 {/* Stats row */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[#1e2535] mb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[#1e2535] mb-4">
                   <div className="bg-[#121722] p-3">
                     <p className="text-[9px] text-[#6b7a8d] uppercase tracking-wider mb-1" style={{ fontFamily: 'Manrope' }}>Value</p>
-                    <p className="text-lg font-semibold text-[#e0e6ed]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{formatValue(selectedCommodity.total_value_usd)}</p>
+                    <p className="text-lg font-semibold text-[#e0e6ed] font-mono">{formatValue(selectedCommodity.total_value_usd)}</p>
                   </div>
                   <div className="bg-[#121722] p-3">
                     <p className="text-[9px] text-[#6b7a8d] uppercase tracking-wider mb-1" style={{ fontFamily: 'Manrope' }}>Volume</p>
-                    <p className="text-lg font-semibold text-[#e0e6ed]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{formatWeight(selectedCommodity.total_weight_kg)}</p>
+                    <p className="text-lg font-semibold text-[#e0e6ed] font-mono">{formatWeight(selectedCommodity.total_weight_kg)}</p>
                   </div>
                   <div className="bg-[#121722] p-3">
                     <p className="text-[9px] text-[#6b7a8d] uppercase tracking-wider mb-1" style={{ fontFamily: 'Manrope' }}>Shipments</p>
-                    <p className="text-lg font-semibold text-[#e0e6ed]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{selectedCommodity.shipment_count}</p>
+                    <p className="text-lg font-semibold text-[#e0e6ed] font-mono">{selectedCommodity.shipment_count}</p>
                   </div>
                   <div className="bg-[#121722] p-3">
                     <p className="text-[9px] text-[#6b7a8d] uppercase tracking-wider mb-1" style={{ fontFamily: 'Manrope' }}>30d Trend</p>
                     <div className="flex items-center gap-2 mt-1">
                       <TrendArrow recent={selectedCommodity.recent_count} total={selectedCommodity.shipment_count} />
-                      <span className="text-sm text-[#8a9bb0]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{selectedCommodity.recent_count}</span>
+                      <span className="text-sm text-[#8a9bb0] font-mono">{selectedCommodity.recent_count}</span>
                     </div>
                   </div>
                 </div>
 
+                {/* Price context */}
+                {(() => {
+                  const price = prices.find(p => {
+                    const catMap: Record<string, string> = {
+                      copper_ore: 'Copper', refined_copper: 'Copper', iron_ore: 'Iron Ore',
+                      coal: 'Coal (thermal)', soy: 'Soy', nickel_ore: 'Nickel', cobalt: 'Cobalt',
+                      zinc_ore: 'Zinc', wheat: 'Wheat', lng: 'LNG (JKM)',
+                      lithium_carbonate: 'Lithium Carbonate', rare_earths: 'Rare Earths (NdPr oxide)',
+                    };
+                    return p.commodity === (catMap[selectedCommodity.category] || '');
+                  });
+                  if (!price) return null;
+                  return (
+                    <div className="bg-[#121722] border border-[#1e2535] px-4 py-2.5 mb-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-[9px] text-[#4C6A92] uppercase tracking-wider font-semibold">Price</span>
+                        <span className="text-sm text-[#C6A86B] font-mono">{price.price.toLocaleString()} {price.unit}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs font-mono ${price.change_24h >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {price.change_24h >= 0 ? '+' : ''}{price.change_24h}%
+                        </span>
+                        <span className="text-[8px] text-[#6b7a8d] font-mono">{price.source}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Exporters */}
-                <div className="mb-6">
-                  <h3 className="text-[9px] text-[#4C6A92] uppercase tracking-[0.15em] font-semibold mb-3" style={{ fontFamily: 'Manrope' }}>
+                <div className="mb-4">
+                  <h3 className="text-[9px] text-[#4C6A92] uppercase tracking-[0.15em] font-semibold mb-2" style={{ fontFamily: 'Manrope' }}>
                     Top Exporters
                   </h3>
                   <div className="bg-[#121722] border border-[#1e2535]">
-                    <div className="px-4 py-2.5 border-b border-[#1e2535] flex">
+                    <div className="px-4 py-2 border-b border-[#1e2535] flex">
                       <span className="text-[9px] text-[#6b7a8d] uppercase tracking-wider flex-1" style={{ fontFamily: 'Manrope' }}>Country</span>
                       <span className="text-[9px] text-[#6b7a8d] uppercase tracking-wider w-24 text-right" style={{ fontFamily: 'Manrope' }}>Value</span>
                       <span className="text-[9px] text-[#6b7a8d] uppercase tracking-wider w-16 text-right" style={{ fontFamily: 'Manrope' }}>Flows</span>
                     </div>
                     {selectedCorridors.length > 0 ? selectedCorridors.slice(0, 8).map((c, i) => (
-                      <div key={i} className="px-4 py-2.5 flex items-center border-b border-[#1e2535]/30 hover:bg-[#1a2030] transition-colors">
+                      <div key={i} className="px-4 py-2 flex items-center border-b border-[#1e2535]/30 hover:bg-[#1a2030] transition-colors">
                         <span className="text-xs text-[#e0e6ed] flex-1" style={{ fontFamily: 'Manrope' }}>{c.country}</span>
-                        <span className="text-xs text-[#8a9bb0] w-24 text-right" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{formatValue(c.value_usd)}</span>
-                        <span className="text-xs text-[#6b7a8d] w-16 text-right" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{c.flow_count}</span>
+                        <span className="text-xs text-[#8a9bb0] w-24 text-right font-mono">{formatValue(c.value_usd)}</span>
+                        <span className="text-xs text-[#6b7a8d] w-16 text-right font-mono">{c.flow_count}</span>
                       </div>
                     )) : (
                       <div className="px-4 py-3 text-xs text-[#6b7a8d]">
@@ -254,23 +336,23 @@ export default function GlobalPage() {
                   </div>
                 </div>
 
-                {/* Top importer */}
-                <div className="mb-6">
-                  <h3 className="text-[9px] text-[#4C6A92] uppercase tracking-[0.15em] font-semibold mb-3" style={{ fontFamily: 'Manrope' }}>
+                {/* Top destination */}
+                <div className="mb-4">
+                  <h3 className="text-[9px] text-[#4C6A92] uppercase tracking-[0.15em] font-semibold mb-2" style={{ fontFamily: 'Manrope' }}>
                     Top Destination
                   </h3>
-                  <div className="bg-[#121722] border border-[#1e2535] px-4 py-3">
+                  <div className="bg-[#121722] border border-[#1e2535] px-4 py-2.5">
                     <div className="flex items-center gap-3">
-                      <span className="text-[#C6A86B] text-sm" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{selectedCommodity.top_destination}</span>
+                      <span className="text-[#C6A86B] text-sm font-mono">{selectedCommodity.top_destination}</span>
                       <span className="text-[10px] text-[#6b7a8d]">primary importer</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Regions active */}
+                {/* Active regions */}
                 {selectedCommodity.regions.length > 0 && (
                   <div>
-                    <h3 className="text-[9px] text-[#4C6A92] uppercase tracking-[0.15em] font-semibold mb-3" style={{ fontFamily: 'Manrope' }}>
+                    <h3 className="text-[9px] text-[#4C6A92] uppercase tracking-[0.15em] font-semibold mb-2" style={{ fontFamily: 'Manrope' }}>
                       Active Regions
                     </h3>
                     <div className="flex flex-wrap gap-2">
@@ -288,28 +370,78 @@ export default function GlobalPage() {
             )}
           </div>
 
-          {/* RIGHT PANEL — Alerts */}
-          <div className="w-48 lg:w-52 shrink-0 border-l border-[#1e2535] overflow-y-auto hidden lg:block" style={{ scrollbarWidth: 'none' }}>
+          {/* RIGHT PANEL — Top Signals */}
+          <div className="w-56 lg:w-64 shrink-0 border-l border-[#1e2535] overflow-y-auto hidden lg:block" style={{ scrollbarWidth: 'none' }}>
             <div className="p-3 border-b border-[#1e2535]">
-              <p className="text-[9px] text-[#4C6A92] uppercase tracking-[0.15em] font-semibold" style={{ fontFamily: 'Manrope' }}>Alerts</p>
+              <p className="text-[9px] text-[#4C6A92] uppercase tracking-[0.15em] font-semibold" style={{ fontFamily: 'Manrope' }}>
+                Top COSMIC Signals
+              </p>
             </div>
-            <div className="p-2 space-y-2">
-              {alerts.map((a, i) => (
-                <div key={i} className={`p-2.5 text-[11px] leading-relaxed border-l-2 ${
-                  a.type === 'warn' ? 'border-l-amber-500 bg-amber-500/5 text-amber-300' : 'border-l-[#4C6A92] bg-[#121722] text-[#8a9bb0]'
-                }`}>
-                  {a.text}
+            <div className="p-2 space-y-1">
+              {topSignals.length === 0 ? (
+                <div className="p-3 text-[10px] text-[#6b7a8d] font-mono">Monitoring...</div>
+              ) : topSignals.map(s => (
+                <div
+                  key={s.id}
+                  className="p-2 border-l-2 bg-[#0d1117]"
+                  style={{ borderLeftColor: IMPACT_COLOR[s.impact_category] || '#6b7a8d' }}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[9px] font-bold font-mono" style={{ color: IMPACT_COLOR[s.impact_category] }}>
+                      {s.impact_score}
+                    </span>
+                    <span className="text-[9px] text-[#6b7a8d] font-mono">
+                      {Math.round(s.confidence * 100)}%
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-[#e0e6ed] leading-snug mb-1" style={{ fontFamily: 'Manrope' }}>
+                    {s.title}
+                  </p>
+                  <ConfidenceBar value={s.confidence} />
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-[8px] text-[#6b7a8d] font-mono uppercase">{s.commodity}</span>
+                    <span className="text-[8px] font-mono" style={{ color: s.route_status === 'confirmed' ? '#22c55e' : s.route_status === 'partial' ? '#eab308' : '#ef4444' }}>
+                      {s.route_status}
+                    </span>
+                  </div>
                 </div>
               ))}
-              {selectedCommodity && (
-                <div className="p-2.5 text-[10px] text-[#6b7a8d] border-t border-[#1e2535] mt-4">
-                  <p style={{ fontFamily: 'JetBrains Mono, monospace' }}>Regions: {selectedCommodity.regions.join(', ')}</p>
+            </div>
+
+            {/* Data freshness */}
+            <div className="p-3 border-t border-[#1e2535]">
+              <p className="text-[9px] text-[#4C6A92] uppercase tracking-[0.15em] font-semibold mb-2" style={{ fontFamily: 'Manrope' }}>
+                Data Freshness
+              </p>
+              {[
+                { source: 'UN Comtrade', fresh: 0.70 },
+                { source: 'IMF PortWatch', fresh: 0.85 },
+                { source: 'VesselFinder', fresh: 0.92 },
+              ].map(d => (
+                <div key={d.source} className="flex items-center justify-between mb-1">
+                  <span className="text-[9px] text-[#6b7a8d] font-mono">{d.source}</span>
+                  <div className="w-16 h-[3px] bg-[#1a2030]">
+                    <div className="h-full" style={{
+                      width: `${d.fresh * 100}%`,
+                      backgroundColor: d.fresh >= 0.8 ? '#22c55e' : d.fresh >= 0.5 ? '#eab308' : '#ef4444',
+                    }} />
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
           </div>
         </div>
       )}
+
+      <style jsx>{`
+        @keyframes scroll {
+          0% { transform: translateX(100%); }
+          100% { transform: translateX(-100%); }
+        }
+        .animate-scroll {
+          animation: scroll 20s linear infinite;
+        }
+      `}</style>
     </div>
   );
 }
