@@ -113,7 +113,7 @@ const PARTNER_CODES: Record<number, string> = {
   724: 'Spain', 752: 'Sweden', 756: 'Switzerland', 764: 'Thailand', 792: 'Turkey',
   804: 'Ukraine', 818: 'Egypt', 826: 'United Kingdom', 840: 'United States',
   842: 'US Virgin Islands', 858: 'Uruguay', 862: 'Venezuela',
-  894: 'Zambia', 704: 'Vietnam',
+  894: 'Zambia',
 }
 
 interface ComtradeRecord {
