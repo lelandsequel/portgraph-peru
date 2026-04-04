@@ -311,6 +311,14 @@ export default function GlobalPage() {
                   );
                 })()}
 
+                {/* Data source badge */}
+                <div className="mb-4 flex items-center gap-2">
+                  <span className="text-[9px] px-2 py-0.5 bg-[#0d2847] border border-[#1e3a5f] text-[#4C9AFF] font-mono uppercase tracking-wider">
+                    UN Comtrade
+                  </span>
+                  <span className="text-[9px] text-[#6b7a8d]">Annual trade flow data</span>
+                </div>
+
                 {/* Exporters */}
                 <div className="mb-4">
                   <h3 className="text-[9px] text-[#4C6A92] uppercase tracking-[0.15em] font-semibold mb-2" style={{ fontFamily: 'Manrope' }}>
