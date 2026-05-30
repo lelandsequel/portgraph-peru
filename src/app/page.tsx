@@ -14,8 +14,18 @@ interface RouteSummary {
   shipment_count: number;
   total_weight_kg: number;
   commodities: string[];
+  confidence_score: number;
   confidence_tier: string;
   port: string;
+  source_basis: string;
+  refusal_boundary: string;
+}
+
+interface RouteMeta {
+  source_table: string;
+  generated_at: string;
+  route_count: number;
+  row_count: number;
 }
 
 const NAV_SECTIONS = [
@@ -55,6 +65,7 @@ function iconForCommodity(commodity: string): string {
 export default function LandingPage() {
   const [stats, setStats] = useState<GlobalStats | null>(null);
   const [routes, setRoutes] = useState<RouteSummary[]>([]);
+  const [routeMeta, setRouteMeta] = useState<RouteMeta | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -64,6 +75,7 @@ export default function LandingPage() {
       .then(([globalData, routeData]) => {
         if (globalData) setStats(globalData);
         if (routeData?.routes) setRoutes(routeData.routes);
+        if (routeData?.meta) setRouteMeta(routeData.meta);
       })
       .catch(() => {});
   }, []);
@@ -96,6 +108,12 @@ export default function LandingPage() {
         <StatCell label="Commodities" value={commodityCount > 0 ? String(commodityCount) : '—'} />
         <StatCell label="Observed Rows" value={totalFlows > 0 ? totalFlows.toLocaleString() : '—'} />
         <StatCell label="Total Value" value={totalValue > 0 ? formatValue(totalValue) : '—'} />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-[#1e2535] mb-10">
+        <ReceiptCell label="Source Table" value={routeMeta?.source_table || 'peru_trade_flows'} detail="Route desk reads the indexed flow corpus directly." />
+        <ReceiptCell label="Refresh Stamp" value={routeMeta?.generated_at ? new Date(routeMeta.generated_at).toLocaleString() : '—'} detail="UI timestamp, not a claim of continuous vessel tracking." />
+        <ReceiptCell label="Refusal Boundary" value="No vessel claim on aggregates" detail="Aggregate lanes are labeled separately from port-call rows." />
       </div>
 
       {/* Quick navigation */}
@@ -134,12 +152,14 @@ export default function LandingPage() {
                 <th className="text-center px-4 py-2.5 text-[9px] text-[#6b7a8d] uppercase tracking-wider font-medium" style={{ fontFamily: 'Manrope' }}></th>
                 <th className="text-left px-4 py-2.5 text-[9px] text-[#6b7a8d] uppercase tracking-wider font-medium" style={{ fontFamily: 'Manrope' }}>Destination</th>
                 <th className="text-right px-4 py-2.5 text-[9px] text-[#6b7a8d] uppercase tracking-wider font-medium" style={{ fontFamily: 'Manrope' }}>Volume</th>
+                <th className="text-left px-4 py-2.5 text-[9px] text-[#6b7a8d] uppercase tracking-wider font-medium" style={{ fontFamily: 'Manrope' }}>Basis</th>
+                <th className="text-right px-4 py-2.5 text-[9px] text-[#6b7a8d] uppercase tracking-wider font-medium" style={{ fontFamily: 'Manrope' }}>Tier</th>
               </tr>
             </thead>
             <tbody>
               {observedLanes.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-xs text-[#6b7a8d]">
+                  <td colSpan={7} className="px-4 py-8 text-center text-xs text-[#6b7a8d]">
                     No observed corridors loaded yet.
                   </td>
                 </tr>
@@ -157,6 +177,12 @@ export default function LandingPage() {
                     <td className="px-4 py-2.5 text-center text-[#4C6A92] text-xs">→</td>
                     <td className="px-4 py-2.5 text-xs text-[#C6A86B]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{c.destination}</td>
                     <td className="px-4 py-2.5 text-xs text-right text-[#8a9bb0]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{formatWeight(c.total_weight_kg)}</td>
+                    <td className="px-4 py-2.5 text-[10px] text-[#6b7a8d]" style={{ fontFamily: 'Manrope' }}>{c.source_basis}</td>
+                    <td className="px-4 py-2.5 text-[10px] text-right" style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+                      <span className={c.confidence_tier === 'HIGH' ? 'text-emerald-400' : c.confidence_tier === 'MEDIUM' ? 'text-amber-400' : 'text-red-400'}>
+                        {c.confidence_tier}
+                      </span>
+                    </td>
                   </tr>
                 );
               })}
@@ -183,6 +209,16 @@ function StatCell({ label, value }: { label: string; value: string }) {
     <div className="bg-[#121722] p-4">
       <p className="text-[9px] text-[#6b7a8d] uppercase tracking-wider mb-1" style={{ fontFamily: 'Manrope' }}>{label}</p>
       <p className="text-xl font-semibold text-[#e0e6ed]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{value}</p>
+    </div>
+  );
+}
+
+function ReceiptCell({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <div className="bg-[#121722] p-4">
+      <p className="text-[9px] text-[#4C6A92] uppercase tracking-wider mb-1" style={{ fontFamily: 'Manrope' }}>{label}</p>
+      <p className="text-sm font-semibold text-[#e0e6ed] truncate" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{value}</p>
+      <p className="text-[11px] text-[#6b7a8d] mt-1 leading-relaxed">{detail}</p>
     </div>
   );
 }

@@ -116,7 +116,7 @@ function seedAlerts(flows: Record<string, unknown>[]): TradeAlert[] {
         id: `seed-rc-${i}`,
         type: 'route_confirmed',
         title: `${vessel} corridor observed: ${origin} → ${destination}`,
-        description: `${commodity} movement tied to ${port}; confidence is source-bound, not a live AIS claim.`,
+        description: `${commodity} movement tied to ${port}; confidence is source-bound, not a vessel-tracking claim.`,
         severity,
         confidence,
         timestamp: now - i * 4 * 60000,

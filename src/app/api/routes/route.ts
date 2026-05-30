@@ -50,20 +50,35 @@ export async function GET() {
     }
 
     const routes = Object.values(routeMap)
-      .map(r => ({
+      .map(r => {
+        const averageConfidence =
+          r.confidence_scores.reduce((a, b) => a + b, 0) / r.confidence_scores.length;
+        return {
         destination: r.destination,
         origin: r.origin,
         shipment_count: r.shipment_count,
         total_weight_kg: r.total_weight_kg,
         commodities: Array.from(r.commodities),
-        confidence_tier: computeConfidenceTier(
-          r.confidence_scores.reduce((a, b) => a + b, 0) / r.confidence_scores.length
-        ),
+        confidence_score: averageConfidence,
+        confidence_tier: computeConfidenceTier(averageConfidence),
         port: r.port,
-      }))
+        source_basis: r.port === 'GLOBAL' ? 'Aggregate trade lane' : 'Port-call lane',
+        refusal_boundary: r.port === 'GLOBAL'
+          ? 'No vessel-level assertion for aggregate lanes'
+          : 'No causality or counterparty claim beyond indexed rows',
+        };
+      })
       .sort((a, b) => b.shipment_count - a.shipment_count);
 
-    return NextResponse.json({ routes });
+    return NextResponse.json({
+      routes,
+      meta: {
+        source_table: 'peru_trade_flows',
+        generated_at: new Date().toISOString(),
+        route_count: routes.length,
+        row_count: flows?.length || 0,
+      },
+    });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
