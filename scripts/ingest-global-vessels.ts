@@ -1,5 +1,5 @@
 /**
- * NAUTILUS — Global VesselFinder Live Vessel Ingest
+ * NAUTILUS — Global VesselFinder Observed Vessel Ingest
  *
  * Source: VesselFinder port pages (free, no API key)
  * Scrapes vessel names, IMO numbers, type, section (expected/in-port/departures)
@@ -198,7 +198,7 @@ async function run() {
       arrival_time: now,
       region: port.region,
       reporter_country: port.country,
-      match_method: 'vessel_scrape_live',
+      match_method: 'vessel_scrape_observed',
       match_details: {
         data_source: 'vesselfinder',
         vessel_name: v.name,
@@ -208,7 +208,7 @@ async function run() {
         reported_time: v.time,
         country: port.country,
         scraped_at: now,
-        note: 'Live vessel position from VesselFinder port page (real AIS)',
+        note: 'Observed vessel row from VesselFinder port page; not continuous vessel tracking',
       },
       confidence_score: 0.85,
       confidence_tier: 'HIGH',

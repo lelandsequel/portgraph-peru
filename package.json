@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "package:mac": "node scripts/package-nautilus-mac.mjs",
     "start": "next start",
     "lint": "next lint",
     "ingest:oec": "npx tsx scripts/ingest-oec.ts",
