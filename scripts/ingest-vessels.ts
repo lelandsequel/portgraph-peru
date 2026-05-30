@@ -98,8 +98,8 @@ async function scrapePort(portName: string, portCode: string): Promise<VesselEnt
 }
 
 async function run() {
-  console.log('NAUTILUS — VesselFinder Live Vessel Ingest\n')
-  console.log(`Source: vesselfinder.com (free, real-time AIS)\n`)
+  console.log('NAUTILUS — VesselFinder Observed Vessel Ingest\n')
+  console.log(`Source: vesselfinder.com scrape snapshot; not continuous vessel tracking\n`)
 
   const now = new Date().toISOString()
   let totalBulk = 0
