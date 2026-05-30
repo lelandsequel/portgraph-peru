@@ -122,8 +122,8 @@ export default function TradeFeedPage() {
     <div className="p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
         <div>
-          <h1 className="text-xl sm:text-2xl font-thin tracking-wide text-[#C6A86B]" style={{ fontFamily: 'Sora, Manrope' }}>Vessels</h1>
-          <p className="text-[#6b7a8d] text-sm mt-0.5">Live vessel activity across global ports</p>
+          <h1 className="text-xl sm:text-2xl font-thin tracking-wide text-[#C6A86B]" style={{ fontFamily: 'Sora, Manrope' }}>Observed Feed</h1>
+          <p className="text-[#6b7a8d] text-sm mt-0.5">Indexed vessel and corridor rows across global ports</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <select

@@ -24,7 +24,7 @@ export default function GuidedTour() {
           popover: {
             title: 'Welcome to NAUTILUS',
             description:
-              'Global commodity intelligence terminal. Real data from UN Comtrade, IMF PortWatch, and VesselFinder.',
+              'Global commodity intelligence terminal. Observed public-data corpus from UN Comtrade, IMF PortWatch, and VesselFinder.',
           },
         },
         {
@@ -38,9 +38,9 @@ export default function GuidedTour() {
         {
           element: '#nav-feed',
           popover: {
-            title: 'Vessels',
+            title: 'Observed Feed',
             description:
-              'Live vessel activity feed. Real bulk carriers with IMO numbers, destinations, and confidence scores.',
+              'Indexed vessel and corridor rows with IMO numbers when available, destinations, and confidence scores.',
           },
         },
         {
@@ -63,7 +63,7 @@ export default function GuidedTour() {
           popover: {
             title: 'You\u2019re all set',
             description:
-              'Real data, global coverage. Click any row to drill in.',
+              'Source-backed data, global coverage. Click any row to drill in.',
           },
         },
       ],

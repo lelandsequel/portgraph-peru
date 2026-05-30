@@ -18,11 +18,48 @@ const TYPE_COLOR: Record<string, string> = {
   route_confirmed: 'text-[#C6A86B] bg-[#C6A86B]/15',
 }
 
+interface RouteSignal {
+  origin: string
+  destination: string
+  shipment_count: number
+  total_weight_kg: number
+  commodities: string[]
+  confidence_tier: string
+  port: string
+}
+
 function timeAgo(ts: number): string {
   const s = Math.floor((Date.now() - ts) / 1000)
   if (s < 60) return `${s}s ago`
   if (s < 3600) return `${Math.floor(s / 60)}m ago`
   return `${Math.floor(s / 3600)}h ago`
+}
+
+function formatWeight(kg: number): string {
+  const tonnes = kg / 1000
+  if (tonnes >= 1e9) return `${(tonnes / 1e9).toFixed(1)}B tonnes`
+  if (tonnes >= 1e6) return `${(tonnes / 1e6).toFixed(1)}M tonnes`
+  if (tonnes >= 1e3) return `${(tonnes / 1e3).toFixed(1)}K tonnes`
+  return `${tonnes.toFixed(1)} tonnes`
+}
+
+function routeBackedAlerts(routes: RouteSignal[]): TradeAlert[] {
+  const now = Date.now()
+  return routes.slice(0, 5).map((route, i) => {
+    const commodity = route.commodities[0] || 'commodity'
+    const aggregate = route.port === 'GLOBAL'
+    return {
+      id: `route-backed-${route.origin}-${route.destination}-${i}`,
+      type: aggregate ? 'route_expansion' : 'route_confirmed',
+      title: `${route.origin} → ${route.destination} ${commodity} corridor observed`,
+      description: `${route.shipment_count} indexed rows, ${formatWeight(route.total_weight_kg)}. ${aggregate ? 'Aggregate lane, not a vessel call.' : 'Port-call lane with origin port evidence.'}`,
+      severity: route.confidence_tier === 'HIGH' ? 'high' : 'medium',
+      confidence: route.confidence_tier === 'HIGH' ? 0.88 : 0.74,
+      timestamp: now - i * 6 * 60000,
+      flowId: `route-${i}`,
+      entities: [route.origin, route.destination, commodity],
+    }
+  })
 }
 
 function AlertCard({ alert }: { alert: TradeAlert }) {
@@ -77,15 +114,20 @@ export default function SignalsPage() {
   const refresh = async (showLoading = false) => {
     if (showLoading) setLoading(true)
     try {
-      const res = await fetch('/api/feed')
-      if (!res.ok) throw new Error('Feed failed')
-      const data = await res.json()
+      const [feedRes, routesRes] = await Promise.all([
+        fetch('/api/feed'),
+        fetch('/api/routes'),
+      ])
+      if (!feedRes.ok) throw new Error('Feed failed')
+      const data = await feedRes.json()
+      const routeData = routesRes.ok ? await routesRes.json() : { routes: [] }
       const flows = data.flows || []
       const { alerts: newAlerts, nextState } = generateAlerts(flows, prevStateRef.current)
+      const alertsToAdd = newAlerts.length > 0 ? newAlerts : routeBackedAlerts(routeData.routes || [])
       prevStateRef.current = nextState
-      if (newAlerts.length > 0) {
+      if (alertsToAdd.length > 0) {
         setAlerts(prev => {
-          const combined = [...newAlerts, ...prev]
+          const combined = [...alertsToAdd, ...prev]
           const seen = new Set<string>()
           return combined.filter(a => {
             if (seen.has(a.id)) return false
@@ -118,7 +160,7 @@ export default function SignalsPage() {
           )}
         </div>
         <p className="text-[#6b7a8d] text-sm">
-          Detected shifts in trade relationships and control
+          Observed corridor shifts, counterparty evidence, and source-bound confidence signals
         </p>
       </div>
 
@@ -131,7 +173,7 @@ export default function SignalsPage() {
       ) : alerts.length === 0 ? (
         <div className="text-center py-20 text-[#6b7a8d]">
           <div className="text-4xl mb-4 opacity-30">◎</div>
-          <div className="text-sm">No signals detected. Monitoring trade flows.</div>
+          <div className="text-sm">No source-backed signals match the current corpus window.</div>
         </div>
       ) : (
         <div className="space-y-px bg-[#1e2535]">

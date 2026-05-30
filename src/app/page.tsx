@@ -8,22 +8,19 @@ interface GlobalStats {
   regions: { name: string; countries: number; flow_count: number; value_usd: number }[];
 }
 
-const CORRIDORS_DISPLAY = [
-  { from: 'Chile', to: 'China', commodity: 'Copper', icon: 'bolt' },
-  { from: 'Australia', to: 'China', commodity: 'Iron Ore', icon: 'landscape' },
-  { from: 'Brazil', to: 'China', commodity: 'Soy', icon: 'grass' },
-  { from: 'Indonesia', to: 'India', commodity: 'Coal', icon: 'local_fire_department' },
-  { from: 'DRC', to: 'China', commodity: 'Cobalt', icon: 'science' },
-  { from: 'South Africa', to: 'India', commodity: 'Coal', icon: 'local_fire_department' },
-  { from: 'Peru', to: 'China', commodity: 'Copper', icon: 'bolt' },
-  { from: 'Canada', to: 'India', commodity: 'Potash', icon: 'grain' },
-  { from: 'Russia', to: 'China', commodity: 'Wheat', icon: 'agriculture' },
-  { from: 'Guinea', to: 'China', commodity: 'Bauxite', icon: 'terrain' },
-];
+interface RouteSummary {
+  origin: string;
+  destination: string;
+  shipment_count: number;
+  total_weight_kg: number;
+  commodities: string[];
+  confidence_tier: string;
+  port: string;
+}
 
 const NAV_SECTIONS = [
   { href: '/terminal', icon: 'terminal', label: 'Terminal', desc: 'Query intelligence profiles' },
-  { href: '/feed', icon: 'directions_boat', label: 'Vessels', desc: 'Live vessel activity feed' },
+  { href: '/feed', icon: 'directions_boat', label: 'Observed Feed', desc: 'Indexed vessel and corridor rows' },
   { href: '/global', icon: 'public', label: 'Global Command', desc: 'Commodity deep-dives' },
   { href: '/flows', icon: 'swap_calls', label: 'Flows', desc: 'Bilateral trade corridors' },
   { href: '/signals', icon: 'notifications_active', label: 'Signals', desc: 'Automated trade alerts' },
@@ -37,13 +34,37 @@ function formatValue(usd: number): string {
   return `$${(usd / 1e3).toFixed(0)}K`;
 }
 
+function formatWeight(kg: number): string {
+  const tonnes = kg / 1000;
+  if (tonnes >= 1e9) return `${(tonnes / 1e9).toFixed(1)}B t`;
+  if (tonnes >= 1e6) return `${(tonnes / 1e6).toFixed(1)}M t`;
+  if (tonnes >= 1e3) return `${(tonnes / 1e3).toFixed(1)}K t`;
+  return `${tonnes.toFixed(1)}t`;
+}
+
+function iconForCommodity(commodity: string): string {
+  const normalized = commodity.toLowerCase();
+  if (normalized.includes('copper')) return 'bolt';
+  if (normalized.includes('coal') || normalized.includes('lng') || normalized.includes('oil')) return 'local_fire_department';
+  if (normalized.includes('iron') || normalized.includes('bauxite')) return 'terrain';
+  if (normalized.includes('soy') || normalized.includes('wheat') || normalized.includes('corn')) return 'agriculture';
+  if (normalized.includes('potash') || normalized.includes('fertilizer')) return 'grain';
+  return 'hub';
+}
+
 export default function LandingPage() {
   const [stats, setStats] = useState<GlobalStats | null>(null);
+  const [routes, setRoutes] = useState<RouteSummary[]>([]);
 
   useEffect(() => {
-    fetch('/api/global')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => d && setStats(d))
+    Promise.all([
+      fetch('/api/global').then(r => r.ok ? r.json() : null),
+      fetch('/api/routes').then(r => r.ok ? r.json() : null),
+    ])
+      .then(([globalData, routeData]) => {
+        if (globalData) setStats(globalData);
+        if (routeData?.routes) setRoutes(routeData.routes);
+      })
       .catch(() => {});
   }, []);
 
@@ -51,6 +72,7 @@ export default function LandingPage() {
   const commodityCount = stats?.commodities.length || 0;
   const totalFlows = stats?.commodities.reduce((s, c) => s + c.shipment_count, 0) || 0;
   const totalValue = stats?.commodities.reduce((s, c) => s + c.total_value_usd, 0) || 0;
+  const observedLanes = routes.slice(0, 10);
 
   return (
     <div className="p-4 sm:p-8 max-w-6xl mx-auto">
@@ -63,16 +85,16 @@ export default function LandingPage() {
           Global Commodity Intelligence
         </p>
         <p className="text-sm text-[#6b7a8d] max-w-2xl leading-relaxed">
-          Real-time tracking of bulk commodity movements across every major corridor.
-          Confidence-scored intelligence from UN Comtrade, IMF PortWatch, and VesselFinder.
+          Observed bulk commodity corridors with confidence-scored provenance.
+          NAUTILUS separates source-backed lanes from inference so analysts can move fast without pretending the corpus says more than it does.
         </p>
       </div>
 
-      {/* Live stats bar */}
+      {/* Corpus stats bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[#1e2535] mb-10">
         <StatCell label="Countries" value={countryCount > 0 ? String(countryCount) : '—'} />
         <StatCell label="Commodities" value={commodityCount > 0 ? String(commodityCount) : '—'} />
-        <StatCell label="Trade Flows" value={totalFlows > 0 ? totalFlows.toLocaleString() : '—'} />
+        <StatCell label="Observed Rows" value={totalFlows > 0 ? totalFlows.toLocaleString() : '—'} />
         <StatCell label="Total Value" value={totalValue > 0 ? formatValue(totalValue) : '—'} />
       </div>
 
@@ -101,7 +123,7 @@ export default function LandingPage() {
       {/* What NAUTILUS tracks */}
       <div className="mb-10">
         <h2 className="text-xs font-semibold text-[#4C6A92] uppercase tracking-[0.15em] mb-4" style={{ fontFamily: 'Manrope' }}>
-          Active Corridors
+          Observed Corridors
         </h2>
         <div className="bg-[#121722] border border-[#1e2535] overflow-x-auto">
           <table className="w-full text-sm min-w-[500px]">
@@ -111,22 +133,33 @@ export default function LandingPage() {
                 <th className="text-left px-4 py-2.5 text-[9px] text-[#6b7a8d] uppercase tracking-wider font-medium" style={{ fontFamily: 'Manrope' }}>Origin</th>
                 <th className="text-center px-4 py-2.5 text-[9px] text-[#6b7a8d] uppercase tracking-wider font-medium" style={{ fontFamily: 'Manrope' }}></th>
                 <th className="text-left px-4 py-2.5 text-[9px] text-[#6b7a8d] uppercase tracking-wider font-medium" style={{ fontFamily: 'Manrope' }}>Destination</th>
+                <th className="text-right px-4 py-2.5 text-[9px] text-[#6b7a8d] uppercase tracking-wider font-medium" style={{ fontFamily: 'Manrope' }}>Volume</th>
               </tr>
             </thead>
             <tbody>
-              {CORRIDORS_DISPLAY.map((c, i) => (
-                <tr key={i} className="border-b border-[#1e2535]/50 hover:bg-[#1a2030] transition-colors">
-                  <td className="px-4 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[#4C6A92]" style={{ fontSize: '14px' }}>{c.icon}</span>
-                      <span className="text-[#e0e6ed] text-xs" style={{ fontFamily: 'Manrope' }}>{c.commodity}</span>
-                    </div>
+              {observedLanes.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-xs text-[#6b7a8d]">
+                    No observed corridors loaded yet.
                   </td>
-                  <td className="px-4 py-2.5 text-xs text-[#8a9bb0]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{c.from}</td>
-                  <td className="px-4 py-2.5 text-center text-[#4C6A92] text-xs">→</td>
-                  <td className="px-4 py-2.5 text-xs text-[#C6A86B]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{c.to}</td>
                 </tr>
-              ))}
+              ) : observedLanes.map((c, i) => {
+                const commodity = c.commodities[0] || 'Commodity';
+                return (
+                  <tr key={i} className="border-b border-[#1e2535]/50 hover:bg-[#1a2030] transition-colors">
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[#4C6A92]" style={{ fontSize: '14px' }}>{iconForCommodity(commodity)}</span>
+                        <span className="text-[#e0e6ed] text-xs" style={{ fontFamily: 'Manrope' }}>{commodity}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5 text-xs text-[#8a9bb0]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{c.origin}</td>
+                    <td className="px-4 py-2.5 text-center text-[#4C6A92] text-xs">→</td>
+                    <td className="px-4 py-2.5 text-xs text-[#C6A86B]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{c.destination}</td>
+                    <td className="px-4 py-2.5 text-xs text-right text-[#8a9bb0]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{formatWeight(c.total_weight_kg)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -138,7 +171,7 @@ export default function LandingPage() {
           <span>UN Comtrade bilateral trade</span>
           <span>IMF PortWatch satellite AIS</span>
           <span>VesselFinder vessel registry</span>
-          <span>HS code classification</span>
+          <span>Aggregate lanes labeled separately from port calls</span>
         </div>
       </div>
     </div>

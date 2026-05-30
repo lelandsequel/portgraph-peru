@@ -29,14 +29,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#6b7a8d] text-lg">search</span>
                   <input
                     className="w-full bg-[#121722] border border-[#1e2535] py-1.5 pl-10 pr-4 text-sm text-[#e0e6ed] placeholder:text-[#6b7a8d]/60 focus:outline-none focus:border-[#4C6A92]"
-                    placeholder="Search vessels, ports, or shipments..."
+                    placeholder="Search vessels, ports, commodities, or corridors..."
                     type="text"
                     readOnly
                   />
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <span className="text-[10px] font-mono text-[#C6A86B] bg-[#C6A86B]/10 px-3 py-1">LIVE</span>
+                <span className="text-[10px] font-mono text-[#C6A86B] bg-[#C6A86B]/10 px-3 py-1">OBSERVED</span>
                 <div className="h-5 w-px bg-[#1e2535]" />
                 <div className="text-right">
                   <p className="text-[10px] font-semibold text-[#C6A86B] uppercase tracking-widest" style={{ fontFamily: 'Manrope' }}>Global Desk</p>
@@ -53,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {/* Footer */}
             <footer className="border-t border-[#1e2535] px-6 py-3 bg-[#0B0E13]">
               <p className="text-[10px] text-[#6b7a8d] text-center tracking-wide" style={{ fontFamily: 'JetBrains Mono, monospace' }}>
-                NAUTILUS · Global Commodity Intelligence · Data: UN Comtrade · IMF PortWatch · VesselFinder · Updated daily
+                NAUTILUS · Global Commodity Intelligence · Observed public-data corpus · Aggregate lanes separated from port calls
               </p>
             </footer>
           </div>

@@ -1,4 +1,4 @@
-import { TradeAlert, AlertType, AlertSeverity } from '@/types/alert'
+import { TradeAlert, AlertSeverity } from '@/types/alert'
 
 interface FlowState {
   entities: string[]
@@ -24,123 +24,152 @@ function clampConfidence(v: number): number {
   return Math.min(0.90, Math.max(0.65, v))
 }
 
+function asText(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function flowId(f: Record<string, unknown>, i: number): string {
+  return asText(f.id) || `flow-${i}`
+}
+
+function commodityName(f: Record<string, unknown>): string {
+  return (
+    asText(f.commodity_description) ||
+    asText(f.commodity) ||
+    asText(f.commodity_category).replace(/_/g, ' ') ||
+    'bulk commodity'
+  )
+}
+
+function originName(f: Record<string, unknown>): string {
+  return asText(f.origin_country) || asText(f.country_of_origin) || asText(f.reporter_country) || 'Unknown origin'
+}
+
+function destinationName(f: Record<string, unknown>): string {
+  return asText(f.destination_country) || asText(f.country_of_destination) || asText(f.importer_country) || 'Unknown destination'
+}
+
+function isUsablePlace(place: string): boolean {
+  const normalized = place.trim().toLowerCase()
+  if (!normalized || normalized.startsWith('unknown')) return false
+  if (/^country-\d+$/.test(normalized)) return false
+  if (normalized === 'other asia') return false
+  return true
+}
+
+function portName(f: Record<string, unknown>): string {
+  const unlocode = asText(f.peru_port_unlocode)
+  if (unlocode === 'GLOBAL') return 'aggregate corridor'
+  return asText(f.peru_port) || unlocode || 'observed origin'
+}
+
+function normalizedConfidence(f: Record<string, unknown>, fallback = 0.74): number {
+  const raw = typeof f.confidence_score === 'number' ? f.confidence_score : fallback
+  return clampConfidence(raw > 1 ? raw / 100 : raw)
+}
+
+function formatMass(kg: unknown): string {
+  const value = typeof kg === 'number' ? kg : 0
+  const tonnes = value / 1000
+  if (!Number.isFinite(tonnes) || tonnes <= 0) return 'unreported volume'
+  if (tonnes >= 1e9) return `${(tonnes / 1e9).toFixed(1)}B tonnes`
+  if (tonnes >= 1e6) return `${(tonnes / 1e6).toFixed(1)}M tonnes`
+  if (tonnes >= 1e3) return `${(tonnes / 1e3).toFixed(1)}K tonnes`
+  return `${tonnes.toFixed(1)} tonnes`
+}
+
 // Seed alerts for first load — pick from real flow data
 function seedAlerts(flows: Record<string, unknown>[]): TradeAlert[] {
   const alerts: TradeAlert[] = []
   const now = Date.now()
 
-  const topFlows = flows.slice(0, 8)
+  const topFlows = flows
+    .filter(f => {
+      const origin = originName(f)
+      const destination = destinationName(f)
+      const md = f.match_details as Record<string, unknown> | undefined
+      const vessel = asText(f.vessel_name) || asText(md?.vessel_name)
+      const exporter = asText(f.exporter_name)
+      const importer = asText(f.importer_name)
+      const hasLane = isUsablePlace(origin) && isUsablePlace(destination)
+      const hasEntity = Boolean(exporter || importer)
+      const hasVessel = Boolean(vessel && isUsablePlace(destination))
+      return (hasLane || hasEntity || hasVessel) && commodityName(f) !== 'bulk commodity'
+    })
+    .slice(0, 12)
 
-  const seeds: Array<{ type: AlertType; make: (f: Record<string, unknown>, i: number) => TradeAlert | null }> = [
-    {
-      type: 'dominance_shift',
-      make: (f, i) => {
-        const exporter = (f.exporter_name as string) || 'Unknown Exporter'
-        const importer = (f.importer_name as string) || 'Unknown Importer'
-        if (!exporter || exporter === 'Unknown Exporter') return null
-        const delta = 0.18 + (i * 0.03)
-        const severity: AlertSeverity = isMajor(exporter) && delta > 0.25 ? 'high' : 'medium'
-        return {
-          id: `seed-ds-${i}`,
-          type: 'dominance_shift',
-          title: `${exporter} consolidating ${(f.commodity_description as string) || 'copper'} flows`,
-          description: `Share in Peru export corridor increased by ${(delta * 100).toFixed(0)}% over last 30 days`,
-          severity,
-          confidence: clampConfidence(0.78 + i * 0.02),
-          timestamp: now - i * 4 * 60000,
-          flowId: (f.id as string) || `flow-${i}`,
-          entities: [exporter, importer].filter(Boolean),
-        }
-      },
-    },
-    {
-      type: 'entity_entry',
-      make: (f, i) => {
-        const exporter = (f.exporter_name as string) || 'Unknown'
-        const importer = (f.importer_name as string) || 'Unknown'
-        if (!exporter || exporter === 'Unknown') return null
-        const commodity = (f.commodity_description as string) || 'copper concentrate'
-        const destination = (f.destination_country as string) || (f.importer_name as string) || 'China'
-        return {
-          id: `seed-ee-${i}`,
-          type: 'entity_entry',
-          title: `${exporter} entered Peru → ${destination} flows`,
-          description: `New participant detected in ${commodity} export corridor`,
-          severity: 'medium',
-          confidence: clampConfidence(0.70 + i * 0.03),
-          timestamp: now - (i + 1) * 7 * 60000,
-          flowId: (f.id as string) || `flow-${i}`,
-          entities: [exporter, importer].filter(Boolean),
-        }
-      },
-    },
-    {
-      type: 'route_expansion',
-      make: (f, i) => {
-        const importer = (f.importer_name as string) || 'Unknown'
-        const commodity = (f.commodity_description as string) || 'copper'
-        const country = (f.destination_country as string) || importer
-        if (!country || country === 'Unknown') return null
-        return {
-          id: `seed-re-${i}`,
-          type: 'route_expansion',
-          title: `${country} emerging as ${commodity} buyer`,
-          description: `Volume threshold crossed — new route in Peru export map`,
-          severity: 'medium',
-          confidence: clampConfidence(0.67 + i * 0.02),
-          timestamp: now - (i + 2) * 11 * 60000,
-          flowId: (f.id as string) || `flow-${i}`,
-          entities: [importer].filter(Boolean),
-        }
-      },
-    },
-  ]
+  for (const [i, f] of topFlows.entries()) {
+    if (alerts.length >= 5) break
 
-  // Generate route_confirmed alerts from vessel_call flows with destination data
-  for (const f of topFlows) {
-    const md = f.match_details as Record<string, unknown> | undefined
-    if (!md) continue
-    const matchMethod = f.match_method as string
-    const vesselName = md.vessel_name as string
-    const destination = md.destination as string
-    const destCountry = (md.destination_country as string) || (f.destination_country as string)
-    const peruPort = f.peru_port as string
+    const origin = originName(f)
+    const destination = destinationName(f)
+    const commodity = commodityName(f)
+    const port = portName(f)
+    const exporter = asText(f.exporter_name)
+    const importer = asText(f.importer_name)
+    const vessel = asText(f.vessel_name) || asText((f.match_details as Record<string, unknown> | undefined)?.vessel_name)
+    const confidence = normalizedConfidence(f, 0.74 + i * 0.02)
+    const severity: AlertSeverity = confidence >= 0.84 || isMajor(exporter || importer) ? 'high' : 'medium'
 
-    if (matchMethod === 'route_confirmed' || (vesselName && destCountry)) {
-      const country = destCountry || ''
-      if (!country) continue
-      const isKeyDest = ROUTE_CONFIRMED_COUNTRIES.some(c => country.toLowerCase().includes(c))
-      if (!isKeyDest) continue
-
+    if (vessel && isUsablePlace(destination)) {
       alerts.push({
-        id: `seed-rc-${alerts.length}`,
+        id: `seed-rc-${i}`,
         type: 'route_confirmed',
-        title: `${vesselName || 'Bulk carrier'} heading to ${destination || country}`,
-        description: `Loaded at ${peruPort || 'Peru port'}, confirmed destination: ${destination || country} (${country})`,
-        severity: 'high',
-        confidence: clampConfidence(0.88),
-        timestamp: now - alerts.length * 3 * 60000,
-        flowId: (f.id as string) || `flow-rc-${alerts.length}`,
-        entities: [vesselName, country, peruPort].filter(Boolean),
+        title: `${vessel} corridor observed: ${origin} → ${destination}`,
+        description: `${commodity} movement tied to ${port}; confidence is source-bound, not a live AIS claim.`,
+        severity,
+        confidence,
+        timestamp: now - i * 4 * 60000,
+        flowId: flowId(f, i),
+        entities: [vessel, origin, destination].filter(Boolean),
+      })
+      continue
+    }
+
+    if (isUsablePlace(origin) && isUsablePlace(destination)) {
+      alerts.push({
+        id: `seed-re-${i}`,
+        type: 'route_expansion',
+        title: `${origin} → ${destination} lane active for ${commodity}`,
+        description: `${formatMass(f.weight_kg)} observed in the current corpus; ${port === 'aggregate corridor' ? 'aggregate lane, not a port call' : `origin surfaced as ${port}`}.`,
+        severity,
+        confidence,
+        timestamp: now - i * 5 * 60000,
+        flowId: flowId(f, i),
+        entities: [origin, destination, commodity].filter(Boolean),
+      })
+      continue
+    }
+
+    if (exporter || importer) {
+      const entity = exporter || importer
+      alerts.push({
+        id: `seed-ee-${i}`,
+        type: 'entity_entry',
+        title: `${entity} appears in ${commodity} flow data`,
+        description: `Counterparty evidence is present in the indexed corpus and can be inspected from the source chain.`,
+        severity,
+        confidence,
+        timestamp: now - i * 6 * 60000,
+        flowId: flowId(f, i),
+        entities: [entity, exporter && importer ? importer : '', destination].filter(Boolean),
+      })
+      continue
+    }
+
+    if (isUsablePlace(origin)) {
+      alerts.push({
+        id: `seed-ds-${i}`,
+        type: 'dominance_shift',
+        title: `${port} ${commodity} observation needs destination proof`,
+        description: `NAUTILUS indexed the port-side observation but refuses to infer a buyer country without source support.`,
+        severity: 'medium',
+        confidence,
+        timestamp: now - i * 7 * 60000,
+        flowId: flowId(f, i),
+        entities: [origin, port, commodity].filter(Boolean),
       })
     }
-  }
-
-  // Generate 4-5 seed alerts from top flows
-  const targets = [
-    { seedIdx: 0, flowIdx: 0 },
-    { seedIdx: 1, flowIdx: 1 },
-    { seedIdx: 0, flowIdx: 2 },
-    { seedIdx: 2, flowIdx: 3 },
-    { seedIdx: 1, flowIdx: 4 },
-  ]
-
-  for (const { seedIdx, flowIdx } of targets) {
-    const flow = topFlows[flowIdx]
-    if (!flow) continue
-    const alert = seeds[seedIdx].make(flow, flowIdx)
-    if (alert) alerts.push(alert)
-    if (alerts.length >= 5) break
   }
 
   return alerts
@@ -173,9 +202,6 @@ export function generateAlerts(
   // Subsequent calls — compare against previous state
   for (const flow of flows.slice(0, 30)) {
     if (alerts.length >= 10) break
-
-    // Random gate — keeps alerts rare
-    if (Math.random() > 0.35) continue
 
     const id = (flow.id as string) || ''
     if (!id) continue

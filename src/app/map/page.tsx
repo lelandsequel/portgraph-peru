@@ -13,14 +13,45 @@ const COUNTRY_COORDS: Record<string, { lat: number; lng: number }> = {
   GERMANY: { lat: 51.16, lng: 10.45 },
   SPAIN: { lat: 40.46, lng: -3.75 },
   USA: { lat: 37.09, lng: -95.71 },
+  'UNITED STATES': { lat: 37.09, lng: -95.71 },
+  MEXICO: { lat: 23.63, lng: -102.55 },
+  ITALY: { lat: 41.87, lng: 12.57 },
+  BULGARIA: { lat: 42.73, lng: 25.49 },
+  ECUADOR: { lat: -1.83, lng: -78.18 },
+  TURKEY: { lat: 38.96, lng: 35.24 },
+  VIETNAM: { lat: 14.06, lng: 108.28 },
+  MALAYSIA: { lat: 4.21, lng: 101.98 },
+  SINGAPORE: { lat: 1.35, lng: 103.82 },
+  POLAND: { lat: 51.92, lng: 19.15 },
+  'UNITED KINGDOM': { lat: 55.38, lng: -3.44 },
+  HONGKONG: { lat: 22.32, lng: 114.17 },
+  'HONG KONG': { lat: 22.32, lng: 114.17 },
   BRAZIL: { lat: -14.24, lng: -51.93 },
   CHILE: { lat: -35.68, lng: -71.54 },
+  AUSTRALIA: { lat: -25.27, lng: 133.78 },
+  INDONESIA: { lat: -0.79, lng: 113.92 },
+  'SOUTH AFRICA': { lat: -30.56, lng: 22.94 },
+  DRC: { lat: -4.04, lng: 21.76 },
+  'DEMOCRATIC REPUBLIC OF THE CONGO': { lat: -4.04, lng: 21.76 },
+  RUSSIA: { lat: 61.52, lng: 105.32 },
+  UKRAINE: { lat: 48.38, lng: 31.17 },
+  KAZAKHSTAN: { lat: 48.02, lng: 66.92 },
+  GUINEA: { lat: 9.95, lng: -9.70 },
+  COLOMBIA: { lat: 4.57, lng: -74.30 },
+  'NEW CALEDONIA': { lat: -20.90, lng: 165.62 },
+  MOZAMBIQUE: { lat: -18.67, lng: 35.53 },
+  ZAMBIA: { lat: -13.13, lng: 27.85 },
+  ARGENTINA: { lat: -38.42, lng: -63.62 },
+  NIGERIA: { lat: 9.08, lng: 8.68 },
+  ANGOLA: { lat: -11.20, lng: 17.87 },
+  QATAR: { lat: 25.35, lng: 51.18 },
+  MYANMAR: { lat: 21.92, lng: 95.96 },
+  PHILIPPINES: { lat: 12.88, lng: 121.77 },
   CANADA: { lat: 56.13, lng: -106.35 },
   NETHERLANDS: { lat: 52.13, lng: 5.29 },
   BELGIUM: { lat: 50.50, lng: 4.47 },
   FINLAND: { lat: 61.92, lng: 25.75 },
   SWEDEN: { lat: 60.13, lng: 18.64 },
-  PHILIPPINES: { lat: 12.88, lng: 121.77 },
   TAIWAN: { lat: 23.70, lng: 120.96 },
   THAILAND: { lat: 15.87, lng: 100.99 },
   PERU: { lat: -9.19, lng: -75.02 },
@@ -30,12 +61,26 @@ const COUNTRY_COORDS: Record<string, { lat: number; lng: number }> = {
 };
 
 interface RouteData {
+  origin: string;
   destination: string;
   shipment_count: number;
   total_weight_kg: number;
   commodities: string[];
   confidence_tier: ConfidenceTier;
   port: string;
+}
+
+function formatWeight(kg: number): string {
+  const tonnes = kg / 1000;
+  if (tonnes >= 1e9) return `${(tonnes / 1e9).toFixed(1)}B t`;
+  if (tonnes >= 1e6) return `${(tonnes / 1e6).toFixed(1)}M t`;
+  if (tonnes >= 1e3) return `${(tonnes / 1e3).toFixed(1)}K t`;
+  return `${tonnes.toFixed(1)}t`;
+}
+
+function routeLabel(route: RouteData) {
+  const port = route.port === 'GLOBAL' ? 'Aggregate' : (GLOBAL_PORTS[route.port]?.name || route.port);
+  return `${route.origin || port} → ${route.destination}`;
 }
 
 export default function RouteMapPage() {
@@ -90,19 +135,24 @@ export default function RouteMapPage() {
   }
 
   const maxShipments = Math.max(...filteredRoutes.map(r => r.shipment_count), 1);
+  const topRoute = filteredRoutes[0];
+  const totalShipments = filteredRoutes.reduce((sum, r) => sum + r.shipment_count, 0);
+  const portCallRows = filteredRoutes.filter(r => r.port !== 'GLOBAL').reduce((sum, r) => sum + r.shipment_count, 0);
+  const aggregateLanes = filteredRoutes.filter(r => r.port === 'GLOBAL').length;
+  const highConfidence = filteredRoutes.filter(r => r.confidence_tier === 'HIGH').length;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white">Route Map</h1>
-          <p className="text-gray-400 text-sm">Global ports to destination countries -- sized by volume</p>
+          <h1 className="text-xl sm:text-2xl font-thin tracking-wide text-[#C6A86B]" style={{ fontFamily: 'Sora, Manrope' }}>Route Map</h1>
+          <p className="text-[#6b7a8d] text-sm">Observed commodity corridors. Port calls and aggregate lanes are labeled separately.</p>
         </div>
         <div className="flex items-center gap-3">
           <select
             value={commodityFilter}
             onChange={e => setCommodityFilter(e.target.value)}
-            className="bg-gray-900 border border-gray-700 rounded-md px-3 py-1.5 text-sm text-gray-300"
+            className="bg-[#121722] border border-[#1e2535] px-3 py-2 text-xs text-[#8a9bb0] focus:outline-none focus:border-[#4C6A92] min-h-[40px]"
           >
             <option value="all">All Commodities</option>
             {allCommodities.map(c => (
@@ -112,7 +162,7 @@ export default function RouteMapPage() {
           <select
             value={regionFilter}
             onChange={e => setRegionFilter(e.target.value)}
-            className="bg-gray-900 border border-gray-700 rounded-md px-3 py-1.5 text-sm text-gray-300"
+            className="bg-[#121722] border border-[#1e2535] px-3 py-2 text-xs text-[#8a9bb0] focus:outline-none focus:border-[#4C6A92] min-h-[40px]"
           >
             <option value="all">All Regions</option>
             <option value="South America">Americas</option>
@@ -132,8 +182,37 @@ export default function RouteMapPage() {
         </div>
       ) : (
         <>
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-px bg-[#1e2535] mb-6">
+            <PulseMetric label="Routes" value={filteredRoutes.length.toLocaleString()} />
+            <PulseMetric label="Shipments" value={totalShipments.toLocaleString()} />
+            <PulseMetric label="Port-Call Rows" value={portCallRows.toLocaleString()} />
+            <PulseMetric label="Aggregate Lanes" value={aggregateLanes.toLocaleString()} />
+            <PulseMetric label="High Confidence" value={highConfidence.toLocaleString()} />
+          </div>
+
+          {topRoute && (
+            <div className="bg-[#121722] border border-[#1e2535] p-4 mb-6">
+              <p className="text-[9px] text-[#4C6A92] uppercase tracking-[0.15em] font-semibold mb-2" style={{ fontFamily: 'Manrope' }}>
+                Dominant Observed Lane
+              </p>
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+                <div>
+                  <p className="text-lg text-[#e0e6ed]" style={{ fontFamily: 'Manrope' }}>{routeLabel(topRoute)}</p>
+                  <p className="text-xs text-[#6b7a8d] mt-1">
+                    {topRoute.commodities.slice(0, 4).join(' · ')}
+                  </p>
+                </div>
+                <div className="flex gap-px bg-[#1e2535] shrink-0">
+                  <SmallPulse label="Flows" value={String(topRoute.shipment_count)} />
+                  <SmallPulse label="Volume" value={formatWeight(topRoute.total_weight_kg)} />
+                  <SmallPulse label="Tier" value={topRoute.confidence_tier} />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* SVG Map */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6 overflow-x-auto">
+          <div className="bg-[#121722] border border-[#1e2535] p-4 mb-6 overflow-x-auto">
             <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto min-w-[600px]">
               {/* Background */}
               <rect width={svgWidth} height={svgHeight} fill="#0a0a0f" rx="8" />
@@ -151,9 +230,11 @@ export default function RouteMapPage() {
                 const destCoords = COUNTRY_COORDS[route.destination.toUpperCase()] || COUNTRY_COORDS[route.destination];
                 if (!destCoords) return null;
 
-                const portInfo = GLOBAL_PORTS[route.port] || PERU_PORTS.PECLL;
-                const x1 = projectLng(portInfo.lng);
-                const y1 = projectLat(portInfo.lat);
+                const originCoords = route.port === 'GLOBAL'
+                  ? (COUNTRY_COORDS[route.origin?.toUpperCase()] || COUNTRY_COORDS[route.origin] || PERU_PORTS.PECLL)
+                  : (GLOBAL_PORTS[route.port] || PERU_PORTS.PECLL);
+                const x1 = projectLng(originCoords.lng);
+                const y1 = projectLat(originCoords.lat);
                 const x2 = projectLng(destCoords.lng);
                 const y2 = projectLat(destCoords.lat);
                 const thickness = Math.max(1, (route.shipment_count / maxShipments) * 4);
@@ -201,6 +282,34 @@ export default function RouteMapPage() {
                 </g>
               ))}
 
+              {/* Aggregate origin dots */}
+              {filteredRoutes
+                .filter(route => route.port === 'GLOBAL')
+                .map((route, i) => {
+                  const coords = COUNTRY_COORDS[route.origin?.toUpperCase()] || COUNTRY_COORDS[route.origin];
+                  if (!coords) return null;
+                  return (
+                    <g key={`origin-${route.origin}-${i}`}>
+                      <circle
+                        cx={projectLng(coords.lng)}
+                        cy={projectLat(coords.lat)}
+                        r={4}
+                        fill="#C6A86B"
+                        opacity={0.85}
+                      />
+                      <text
+                        x={projectLng(coords.lng) + 7}
+                        y={projectLat(coords.lat) + 3}
+                        fill="#C6A86B"
+                        fontSize="9"
+                        fontFamily="monospace"
+                      >
+                        {route.origin}
+                      </text>
+                    </g>
+                  );
+                })}
+
               {/* Destination dots */}
               {filteredRoutes.map((route, i) => {
                 const coords = COUNTRY_COORDS[route.destination.toUpperCase()] || COUNTRY_COORDS[route.destination];
@@ -231,7 +340,7 @@ export default function RouteMapPage() {
             </svg>
 
             {/* Legend */}
-            <div className="flex flex-wrap items-center gap-3 sm:gap-6 mt-3 text-xs text-gray-500">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-6 mt-3 text-xs text-[#6b7a8d]">
               <div className="flex items-center gap-1">
                 <span className="w-3 h-1 bg-blue-500 rounded" />
                 <span>Copper</span>
@@ -260,40 +369,44 @@ export default function RouteMapPage() {
           </div>
 
           {/* Route Table */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-x-auto">
+          <div className="bg-[#121722] border border-[#1e2535] overflow-x-auto">
             <table className="w-full text-sm min-w-[640px]">
               <thead>
-                <tr className="border-b border-gray-800">
-                  <th className="text-left px-4 py-3 text-gray-400 font-medium">Port</th>
-                  <th className="text-left px-4 py-3 text-gray-400 font-medium">Destination</th>
-                  <th className="text-left px-4 py-3 text-gray-400 font-medium">Shipments</th>
-                  <th className="text-left px-4 py-3 text-gray-400 font-medium">Volume</th>
-                  <th className="text-left px-4 py-3 text-gray-400 font-medium">Commodities</th>
-                  <th className="text-left px-4 py-3 text-gray-400 font-medium">Confidence</th>
+                <tr className="border-b border-[#1e2535]">
+                  <th className="text-left px-4 py-3 text-[#6b7a8d] font-medium">Origin</th>
+                  <th className="text-left px-4 py-3 text-[#6b7a8d] font-medium">Port</th>
+                  <th className="text-left px-4 py-3 text-[#6b7a8d] font-medium">Destination</th>
+                  <th className="text-left px-4 py-3 text-[#6b7a8d] font-medium">Shipments</th>
+                  <th className="text-left px-4 py-3 text-[#6b7a8d] font-medium">Volume</th>
+                  <th className="text-left px-4 py-3 text-[#6b7a8d] font-medium">Commodities</th>
+                  <th className="text-left px-4 py-3 text-[#6b7a8d] font-medium">Confidence</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRoutes.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                      No routes to display. Run the seed script to populate data.
+                    <td colSpan={7} className="px-4 py-8 text-center text-[#6b7a8d]">
+                      No routes match the active filters.
                     </td>
                   </tr>
                 ) : (
                   filteredRoutes.map((route, i) => (
-                    <tr key={i} className="border-b border-gray-800/50 hover:bg-gray-800/50">
-                      <td className="px-4 py-3 text-blue-400 font-mono">
-                        {GLOBAL_PORTS[route.port]?.name || route.port}
+                    <tr key={i} className="border-b border-[#1e2535]/50 hover:bg-[#1a2030]">
+                      <td className="px-4 py-3 text-[#e0e6ed] font-mono">
+                        {route.origin || 'Unknown'}
+                      </td>
+                      <td className="px-4 py-3 text-[#4C6A92] font-mono">
+                        {route.port === 'GLOBAL' ? 'Aggregate' : (GLOBAL_PORTS[route.port]?.name || route.port)}
                       </td>
                       <td className="px-4 py-3 text-emerald-400">{route.destination}</td>
-                      <td className="px-4 py-3 text-gray-300 font-mono">{route.shipment_count}</td>
-                      <td className="px-4 py-3 text-gray-300 font-mono">
-                        {route.total_weight_kg > 0 ? `${(route.total_weight_kg / 1000).toFixed(1)}t` : '-'}
+                      <td className="px-4 py-3 text-[#8a9bb0] font-mono">{route.shipment_count}</td>
+                      <td className="px-4 py-3 text-[#8a9bb0] font-mono">
+                        {route.total_weight_kg > 0 ? formatWeight(route.total_weight_kg) : '-'}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-1 flex-wrap">
                           {route.commodities.map((c, j) => (
-                            <span key={j} className="text-xs bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded">{c}</span>
+                            <span key={j} className="text-xs bg-[#1a2030] text-[#8a9bb0] px-1.5 py-0.5">{c}</span>
                           ))}
                         </div>
                       </td>
@@ -308,6 +421,24 @@ export default function RouteMapPage() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function PulseMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-[#121722] p-4">
+      <p className="text-[9px] text-[#6b7a8d] uppercase tracking-wider mb-1" style={{ fontFamily: 'Manrope' }}>{label}</p>
+      <p className="text-xl font-semibold text-[#e0e6ed]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{value}</p>
+    </div>
+  );
+}
+
+function SmallPulse({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-[#0B0E13] px-3 py-2 min-w-20">
+      <p className="text-[9px] text-[#6b7a8d] uppercase tracking-wider" style={{ fontFamily: 'Manrope' }}>{label}</p>
+      <p className="text-xs text-[#C6A86B]" style={{ fontFamily: 'JetBrains Mono, monospace' }}>{value}</p>
     </div>
   );
 }

@@ -65,7 +65,7 @@ export default function Sidebar() {
 
         <SectionLabel label="Monitor" />
         <NavLink href="/terminal" icon="terminal" label="Terminal" id="nav-terminal" active={isActive('/terminal')} onClick={() => setOpen(false)} />
-        <NavLink href="/feed" icon="directions_boat" label="Vessels" id="nav-feed" active={isActive('/feed')} onClick={() => setOpen(false)} />
+        <NavLink href="/feed" icon="directions_boat" label="Observed Feed" id="nav-feed" active={isActive('/feed')} onClick={() => setOpen(false)} />
         <NavLink href="/global" icon="public" label="Global" id="nav-global" active={isActive('/global')} onClick={() => setOpen(false)} />
 
         <SectionLabel label="Intelligence" />
@@ -99,7 +99,7 @@ export default function Sidebar() {
         </button>
         <h1 className="ml-3 text-sm font-thin tracking-[0.25em] text-[#C6A86B]" style={{ fontFamily: 'Sora, Manrope' }}>NAUTILUS</h1>
         <div className="ml-auto flex items-center gap-2">
-          <span className="text-[9px] font-mono text-[#C6A86B] bg-[#C6A86B]/10 px-2 py-0.5">LIVE</span>
+          <span className="text-[9px] font-mono text-[#C6A86B] bg-[#C6A86B]/10 px-2 py-0.5">OBSERVED</span>
         </div>
       </div>
 

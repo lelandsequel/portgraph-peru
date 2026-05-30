@@ -10,7 +10,7 @@ export async function GET() {
 
     const { data: flows, error } = await supabase
       .from('peru_trade_flows')
-      .select('peru_port_unlocode, destination_country, commodity, weight_kg, confidence_score')
+      .select('peru_port_unlocode, origin_country, destination_country, commodity, weight_kg, confidence_score')
       .not('destination_country', 'is', null);
 
     if (error) {
@@ -20,6 +20,7 @@ export async function GET() {
     // Aggregate routes
     const routeMap: Record<string, {
       destination: string;
+      origin: string;
       shipment_count: number;
       total_weight_kg: number;
       commodities: Set<string>;
@@ -28,10 +29,13 @@ export async function GET() {
     }> = {};
 
     for (const flow of (flows || [])) {
-      const key = `${flow.peru_port_unlocode}-${flow.destination_country}`;
+      const origin = flow.origin_country || 'Peru';
+      if (!isUsableCountry(origin) || !isUsableCountry(flow.destination_country)) continue;
+      const key = `${flow.peru_port_unlocode}-${origin}-${flow.destination_country}`;
       if (!routeMap[key]) {
         routeMap[key] = {
           destination: flow.destination_country,
+          origin,
           shipment_count: 0,
           total_weight_kg: 0,
           commodities: new Set(),
@@ -48,6 +52,7 @@ export async function GET() {
     const routes = Object.values(routeMap)
       .map(r => ({
         destination: r.destination,
+        origin: r.origin,
         shipment_count: r.shipment_count,
         total_weight_kg: r.total_weight_kg,
         commodities: Array.from(r.commodities),
@@ -62,4 +67,13 @@ export async function GET() {
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+}
+
+function isUsableCountry(country?: string | null) {
+  if (!country) return false;
+  const normalized = country.trim().toLowerCase();
+  if (!normalized || normalized === 'unknown') return false;
+  if (/^country-\d+$/.test(normalized)) return false;
+  if (normalized === 'other asia') return false;
+  return true;
 }
