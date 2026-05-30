@@ -11,14 +11,6 @@ export default function GuidedTour() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (!mounted) return;
-    const seen = localStorage.getItem('nautilus_tour_seen');
-    if (!seen) {
-      startTour();
-    }
-  }, [mounted]);
-
   function startTour() {
     const d = driver({
       showProgress: true,

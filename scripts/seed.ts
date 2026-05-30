@@ -16,11 +16,11 @@ import { runMeteorPipeline } from '../src/lib/pipeline/meteor';
 import { runCometPipeline } from '../src/lib/pipeline/comet';
 import { runAuroraPipeline } from '../src/lib/pipeline/aurora';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://nipwrfsiiajddhisqkex.supabase.co';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-if (!supabaseKey) {
-  console.error('ERROR: Set SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY');
+if (!supabaseUrl || !supabaseKey) {
+  console.error('ERROR: Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY');
   process.exit(1);
 }
 

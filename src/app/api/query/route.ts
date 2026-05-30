@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseClient } from '@supabase/supabase-js';
 import {
   TradeIntelligenceProfile,
   IntelligenceFact,
@@ -17,12 +17,12 @@ import {
   ConfidenceTier,
 } from '@/lib/db/types';
 import { normalizeVesselName, normalizeCompanyName } from '@/lib/pipeline/meteor';
+import { getServiceClient } from '@/lib/db/supabase';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://nipwrfsiiajddhisqkex.supabase.co';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+export const dynamic = 'force-dynamic';
 
 function getSupabase(): SupabaseClient {
-  return createClient(supabaseUrl, supabaseKey);
+  return getServiceClient();
 }
 
 export async function POST(request: NextRequest) {

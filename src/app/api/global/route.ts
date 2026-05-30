@@ -1,17 +1,18 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getServiceClient } from '@/lib/db/supabase';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://nipwrfsiiajddhisqkex.supabase.co';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = getServiceClient();
 
-    // Get all trade flows with reporter_country and commodity data
+    // Get all trade flows with commodity corridor data. Production data may not
+    // include newer global-expansion columns yet, so derive reporter/region from
+    // stable origin and destination fields instead of querying missing columns.
     const { data: flows, error } = await supabase
       .from('peru_trade_flows')
-      .select('commodity, commodity_category, reporter_country, region, destination_country, weight_kg, declared_value_usd, arrival_time, match_method, origin_country')
+      .select('commodity, commodity_category, destination_country, weight_kg, declared_value_usd, arrival_time, match_method, origin_country')
       .not('commodity_category', 'in', '(port_call_aggregate,vessel_call)')
       .order('arrival_time', { ascending: false })
       .limit(5000);
@@ -55,9 +56,11 @@ export async function GET() {
       entry.shipment_count++;
       entry.total_weight_kg += f.weight_kg || 0;
       entry.total_value_usd += f.declared_value_usd || 0;
-      if (f.reporter_country) entry.top_exporters[f.reporter_country] = (entry.top_exporters[f.reporter_country] || 0) + 1;
+      const reporter = f.origin_country || 'Unknown';
+      if (reporter !== 'Unknown') entry.top_exporters[reporter] = (entry.top_exporters[reporter] || 0) + 1;
       if (f.destination_country) entry.top_destinations[f.destination_country] = (entry.top_destinations[f.destination_country] || 0) + 1;
-      if (f.region) entry.regions.add(f.region);
+      const region = inferRegion(f.origin_country || f.destination_country);
+      if (region) entry.regions.add(region);
       if (f.arrival_time && new Date(f.arrival_time) > thirtyDaysAgo) {
         entry.recent_count++;
       }
@@ -78,11 +81,11 @@ export async function GET() {
     // Region summary
     const regionMap: Record<string, { country_count: Set<string>; flow_count: number; value_usd: number }> = {};
     for (const f of (flows || [])) {
-      const reg = f.region || 'Unknown';
+      const reg = inferRegion(f.origin_country || f.destination_country) || 'Unknown';
       if (!regionMap[reg]) regionMap[reg] = { country_count: new Set(), flow_count: 0, value_usd: 0 };
       regionMap[reg].flow_count++;
       regionMap[reg].value_usd += f.declared_value_usd || 0;
-      if (f.reporter_country) regionMap[reg].country_count.add(f.reporter_country);
+      if (f.origin_country) regionMap[reg].country_count.add(f.origin_country);
     }
 
     const regions = Object.entries(regionMap).map(([name, d]) => ({
@@ -95,8 +98,8 @@ export async function GET() {
     // Country corridor summary
     const countryMap: Record<string, { commodities: Set<string>; flow_count: number; value_usd: number; region: string }> = {};
     for (const f of (flows || [])) {
-      const country = f.reporter_country || f.origin_country || 'Unknown';
-      if (!countryMap[country]) countryMap[country] = { commodities: new Set(), flow_count: 0, value_usd: 0, region: f.region || '' };
+      const country = f.origin_country || 'Unknown';
+      if (!countryMap[country]) countryMap[country] = { commodities: new Set(), flow_count: 0, value_usd: 0, region: inferRegion(country) || '' };
       countryMap[country].flow_count++;
       countryMap[country].value_usd += f.declared_value_usd || 0;
       if (f.commodity) countryMap[country].commodities.add(f.commodity);
@@ -114,4 +117,16 @@ export async function GET() {
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+}
+
+function inferRegion(country?: string | null) {
+  if (!country) return '';
+  const normalized = country.toLowerCase();
+  if (['peru', 'chile', 'brazil', 'argentina', 'colombia', 'ecuador', 'bolivia'].some(c => normalized.includes(c))) return 'South America';
+  if (['china', 'japan', 'korea', 'india', 'singapore', 'taiwan', 'vietnam', 'malaysia', 'thailand'].some(c => normalized.includes(c))) return 'Asia-Pacific';
+  if (['united states', 'canada', 'mexico'].some(c => normalized.includes(c))) return 'North America';
+  if (['spain', 'germany', 'france', 'italy', 'netherlands', 'belgium', 'united kingdom', 'russia'].some(c => normalized.includes(c))) return 'Europe/FSU';
+  if (['australia', 'new zealand'].some(c => normalized.includes(c))) return 'Oceania';
+  if (['south africa', 'ghana', 'nigeria', 'morocco', 'egypt'].some(c => normalized.includes(c))) return 'Africa';
+  return 'Other';
 }

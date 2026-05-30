@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import GuidedTour from '@/components/GuidedTour';
 import Sidebar from '@/components/Sidebar';
@@ -8,14 +8,14 @@ export const metadata: Metadata = {
   description: 'Confidence-scored commodity intelligence across global trade corridors',
 };
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;600;800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet" />
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-      </head>
       <body className="bg-[#0B0E13] text-[#e0e6ed] font-[Inter] overflow-hidden">
         <div className="flex h-screen">
           <Sidebar />

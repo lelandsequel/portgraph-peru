@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { computeConfidenceTier } from '@/lib/pipeline/aurora';
+import { getServiceClient } from '@/lib/db/supabase';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://nipwrfsiiajddhisqkex.supabase.co';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = getServiceClient();
 
     const { data: flows, error } = await supabase
       .from('peru_trade_flows')
